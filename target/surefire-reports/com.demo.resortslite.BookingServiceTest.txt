@@ -1,12 +1,25 @@
 -------------------------------------------------------------------------------
 Test set: com.demo.resortslite.BookingServiceTest
 -------------------------------------------------------------------------------
-Tests run: 35, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.439 s <<< FAILURE! - in com.demo.resortslite.BookingServiceTest
-com.demo.resortslite.BookingServiceTest.testIsRoomAvailable_nullRoomType_returnsFalse  Time elapsed: 0.002 s  <<< ERROR!
+Tests run: 36, Failures: 1, Errors: 1, Skipped: 0, Time elapsed: 0.505 s <<< FAILURE! - in com.demo.resortslite.BookingServiceTest
+com.demo.resortslite.BookingServiceTest.calculateRoomPrice_withCombinedDiscounts_appliesAll  Time elapsed: 0.009 s  <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <958.32> but was: <957.60>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+	at org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+	at org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1142)
+	at com.demo.resortslite.BookingServiceTest.calculateRoomPrice_withCombinedDiscounts_appliesAll(BookingServiceTest.java:410)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+com.demo.resortslite.BookingServiceTest.isRoomAvailable_withNullRoomType_returnsFalse  Time elapsed: 0.002 s  <<< ERROR!
 java.lang.NullPointerException: Cannot invoke "String.equals(Object)" because "roomType" is null
 	at com.demo.resortslite.BookingService.isRoomAvailable(BookingService.java:93)
-	at com.demo.resortslite.BookingServiceTest.testIsRoomAvailable_nullRoomType_returnsFalse(BookingServiceTest.java:407)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at com.demo.resortslite.BookingServiceTest.isRoomAvailable_withNullRoomType_returnsFalse(BookingServiceTest.java:491)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
 

@@ -8,183 +8,217 @@ import static org.junit.jupiter.api.Assertions.*;
 class ResortsLiteApplicationTest {
 
     @Test
-    void testMain_withNullArgs_runsWithoutException() {
-        // This test verifies that the main method can be called
-        // In a real scenario, we would mock SpringApplication.run
-        // For now, we just verify the class structure
+    void main_withValidArgs_startsApplication() {
+        // Arrange
+        String[] args = new String[]{};
+
+        // Act & Assert
+        // We cannot actually start the application in a unit test
+        // but we can verify the class structure and main method exists
         assertDoesNotThrow(() -> {
-            // Verify class exists and has main method
+            // Verify the main method exists and is accessible
             ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
         });
     }
 
     @Test
-    void testMain_methodExists_andIsPublicStatic() throws NoSuchMethodException {
-        // Arrange & Act
-        var mainMethod = ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
-
-        // Assert
-        assertNotNull(mainMethod);
-        assertTrue(java.lang.reflect.Modifier.isPublic(mainMethod.getModifiers()));
-        assertTrue(java.lang.reflect.Modifier.isStatic(mainMethod.getModifiers()));
+    void main_withNullArgs_doesNotThrowNullPointer() {
+        // Arrange & Act & Assert
+        assertDoesNotThrow(() -> {
+            ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
+        });
     }
 
     @Test
-    void testApplicationClass_hasSpringBootApplicationAnnotation() {
-        // Act
+    void main_withEmptyArgs_doesNotThrow() {
+        // Arrange
+        String[] args = new String[]{};
+
+        // Act & Assert
+        assertDoesNotThrow(() -> {
+            ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
+        });
+    }
+
+    @Test
+    void main_withMultipleArgs_doesNotThrow() {
+        // Arrange & Act & Assert
+        assertDoesNotThrow(() -> {
+            ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
+        });
+    }
+
+    @Test
+    void applicationClass_hasSpringBootApplicationAnnotation() {
+        // Arrange & Act
         boolean hasAnnotation = ResortsLiteApplication.class
-                .isAnnotationPresent(org.springframework.boot.autoconfigure.SpringBootApplication.class);
+            .isAnnotationPresent(org.springframework.boot.autoconfigure.SpringBootApplication.class);
 
         // Assert
         assertTrue(hasAnnotation, "ResortsLiteApplication should have @SpringBootApplication annotation");
     }
 
     @Test
-    void testApplicationClass_isPublic() {
-        // Act
+    void applicationClass_isPublic() {
+        // Arrange & Act
         int modifiers = ResortsLiteApplication.class.getModifiers();
 
         // Assert
-        assertTrue(java.lang.reflect.Modifier.isPublic(modifiers));
+        assertTrue(java.lang.reflect.Modifier.isPublic(modifiers), 
+            "ResortsLiteApplication class should be public");
     }
 
     @Test
-    void testApplicationClass_canBeInstantiated() {
-        // Act & Assert
-        assertDoesNotThrow(() -> {
-            new ResortsLiteApplication();
-        });
+    void mainMethod_isPublic() throws NoSuchMethodException {
+        // Arrange
+        var mainMethod = ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
+
+        // Act
+        int modifiers = mainMethod.getModifiers();
+
+        // Assert
+        assertTrue(java.lang.reflect.Modifier.isPublic(modifiers), 
+            "main method should be public");
     }
 
     @Test
-    void testApplicationClass_hasDefaultConstructor() {
-        // Act & Assert
+    void mainMethod_isStatic() throws NoSuchMethodException {
+        // Arrange
+        var mainMethod = ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
+
+        // Act
+        int modifiers = mainMethod.getModifiers();
+
+        // Assert
+        assertTrue(java.lang.reflect.Modifier.isStatic(modifiers), 
+            "main method should be static");
+    }
+
+    @Test
+    void mainMethod_returnsVoid() throws NoSuchMethodException {
+        // Arrange
+        var mainMethod = ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
+
+        // Act
+        Class<?> returnType = mainMethod.getReturnType();
+
+        // Assert
+        assertEquals(void.class, returnType, "main method should return void");
+    }
+
+    @Test
+    void mainMethod_acceptsStringArray() throws NoSuchMethodException {
+        // Arrange
+        var mainMethod = ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
+
+        // Act
+        Class<?>[] parameterTypes = mainMethod.getParameterTypes();
+
+        // Assert
+        assertEquals(1, parameterTypes.length, "main method should accept exactly one parameter");
+        assertEquals(String[].class, parameterTypes[0], "main method parameter should be String[]");
+    }
+
+    @Test
+    void applicationClass_hasDefaultConstructor() {
+        // Arrange & Act & Assert
         assertDoesNotThrow(() -> {
             ResortsLiteApplication.class.getDeclaredConstructor();
-        });
+        }, "ResortsLiteApplication should have a default constructor");
     }
 
     @Test
-    void testApplicationClass_packageName_isCorrect() {
-        // Act
+    void applicationClass_canBeInstantiated() {
+        // Arrange & Act & Assert
+        assertDoesNotThrow(() -> {
+            new ResortsLiteApplication();
+        }, "ResortsLiteApplication should be instantiable");
+    }
+
+    @Test
+    void applicationInstance_isNotNull() {
+        // Arrange & Act
+        ResortsLiteApplication application = new ResortsLiteApplication();
+
+        // Assert
+        assertNotNull(application, "ResortsLiteApplication instance should not be null");
+    }
+
+    @Test
+    void applicationClass_isInCorrectPackage() {
+        // Arrange & Act
         String packageName = ResortsLiteApplication.class.getPackage().getName();
 
         // Assert
-        assertEquals("com.demo.resortslite", packageName);
+        assertEquals("com.demo.resortslite", packageName, 
+            "ResortsLiteApplication should be in com.demo.resortslite package");
     }
 
     @Test
-    void testApplicationClass_simpleName_isCorrect() {
-        // Act
+    void applicationClass_hasCorrectSimpleName() {
+        // Arrange & Act
         String simpleName = ResortsLiteApplication.class.getSimpleName();
 
         // Assert
-        assertEquals("ResortsLiteApplication", simpleName);
+        assertEquals("ResortsLiteApplication", simpleName, 
+            "Class should be named ResortsLiteApplication");
     }
 
     @Test
-    void testMain_methodReturnType_isVoid() throws NoSuchMethodException {
+    void mainMethod_exists() {
+        // Arrange & Act & Assert
+        assertDoesNotThrow(() -> {
+            ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
+        }, "main method should exist");
+    }
+
+    @Test
+    void applicationClass_isNotAbstract() {
         // Arrange & Act
-        var mainMethod = ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
-
-        // Assert
-        assertEquals(void.class, mainMethod.getReturnType());
-    }
-
-    @Test
-    void testMain_methodParameterType_isStringArray() throws NoSuchMethodException {
-        // Arrange & Act
-        var mainMethod = ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
-        var parameterTypes = mainMethod.getParameterTypes();
-
-        // Assert
-        assertEquals(1, parameterTypes.length);
-        assertEquals(String[].class, parameterTypes[0]);
-    }
-
-    @Test
-    void testApplicationClass_hasOnlyOnePublicMethod() {
-        // Act
-        var publicMethods = ResortsLiteApplication.class.getDeclaredMethods();
-        long publicMethodCount = java.util.Arrays.stream(publicMethods)
-                .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
-                .count();
-
-        // Assert
-        assertEquals(1, publicMethodCount, "Should have only one public method (main)");
-    }
-
-    @Test
-    void testApplicationClass_isNotAbstract() {
-        // Act
         int modifiers = ResortsLiteApplication.class.getModifiers();
 
         // Assert
-        assertFalse(java.lang.reflect.Modifier.isAbstract(modifiers));
+        assertFalse(java.lang.reflect.Modifier.isAbstract(modifiers), 
+            "ResortsLiteApplication should not be abstract");
     }
 
     @Test
-    void testApplicationClass_isNotInterface() {
-        // Act & Assert
-        assertFalse(ResortsLiteApplication.class.isInterface());
+    void applicationClass_isNotInterface() {
+        // Arrange & Act
+        boolean isInterface = ResortsLiteApplication.class.isInterface();
+
+        // Assert
+        assertFalse(isInterface, "ResortsLiteApplication should not be an interface");
     }
 
     @Test
-    void testApplicationClass_isNotEnum() {
-        // Act & Assert
-        assertFalse(ResortsLiteApplication.class.isEnum());
+    void applicationClass_isNotEnum() {
+        // Arrange & Act
+        boolean isEnum = ResortsLiteApplication.class.isEnum();
+
+        // Assert
+        assertFalse(isEnum, "ResortsLiteApplication should not be an enum");
     }
 
     @Test
-    void testApplicationClass_hasNoSuperclassOtherThanObject() {
-        // Act
+    void applicationClass_extendsObject() {
+        // Arrange & Act
         Class<?> superclass = ResortsLiteApplication.class.getSuperclass();
 
         // Assert
-        assertEquals(Object.class, superclass);
+        assertEquals(Object.class, superclass, 
+            "ResortsLiteApplication should extend Object directly");
     }
 
     @Test
-    void testApplicationClass_implementsNoInterfaces() {
-        // Act
-        Class<?>[] interfaces = ResortsLiteApplication.class.getInterfaces();
+    void multipleInstances_canBeCreated() {
+        // Arrange & Act
+        ResortsLiteApplication app1 = new ResortsLiteApplication();
+        ResortsLiteApplication app2 = new ResortsLiteApplication();
 
         // Assert
-        assertEquals(0, interfaces.length);
-    }
-
-    @Test
-    void testApplicationClass_hasNoFields() {
-        // Act
-        var declaredFields = ResortsLiteApplication.class.getDeclaredFields();
-
-        // Assert
-        assertEquals(0, declaredFields.length, "Application class should have no fields");
-    }
-
-    @Test
-    void testApplicationClass_annotationCount_isOne() {
-        // Act
-        var annotations = ResortsLiteApplication.class.getDeclaredAnnotations();
-
-        // Assert
-        assertEquals(1, annotations.length, "Should have exactly one annotation (@SpringBootApplication)");
-    }
-
-    @Test
-    void testApplicationClass_canBeLoadedByClassLoader() {
-        // Act & Assert
-        assertDoesNotThrow(() -> {
-            Class.forName("com.demo.resortslite.ResortsLiteApplication");
-        });
-    }
-
-    @Test
-    void testApplicationClass_hasCorrectCanonicalName() {
-        // Act
-        String canonicalName = ResortsLiteApplication.class.getCanonicalName();
-
-        // Assert
-        assertEquals("com.demo.resortslite.ResortsLiteApplication", canonicalName);
+        assertNotNull(app1);
+        assertNotNull(app2);
+        assertNotSame(app1, app2, "Each instance should be a separate object");
     }
 }

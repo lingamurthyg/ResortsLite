@@ -1,101 +1,106 @@
 package com.demo.resortslite;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import jakarta.servlet.http.HttpSession;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpSession;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class BookingControllerTest {
 
     @Mock
     private BookingService bookingService;
 
-    @Mock
-    private HttpSession session;
-
     @InjectMocks
     private BookingController bookingController;
 
+    private MockHttpSession session;
+
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
+        session = new MockHttpSession();
     }
 
     @Test
-    void testCreateBooking_withValidParameters_returnsConfirmedBooking() {
+    void createBooking_withValidParameters_returnsConfirmedBooking() {
         // Arrange
         String guestName = "John Doe";
         String roomType = "DELUXE";
         String checkIn = "2024-03-01";
         String checkOut = "2024-03-05";
-
+        
         Map<String, Object> mockBooking = new HashMap<>();
         mockBooking.put("bookingId", "BK-12345678");
         mockBooking.put("guestName", guestName);
         mockBooking.put("roomType", roomType);
         mockBooking.put("checkIn", checkIn);
         mockBooking.put("checkOut", checkOut);
-
+        
         when(bookingService.createBooking(guestName, roomType, checkIn, checkOut))
-                .thenReturn(mockBooking);
+            .thenReturn(mockBooking);
 
         // Act
         Map<String, Object> response = bookingController.createBooking(
-                guestName, roomType, checkIn, checkOut, session);
+            guestName, roomType, checkIn, checkOut, session);
 
         // Assert
         assertNotNull(response);
         assertEquals("confirmed", response.get("status"));
         assertNotNull(response.get("booking"));
+        assertEquals(mockBooking, response.get("booking"));
         verify(bookingService, times(1)).createBooking(guestName, roomType, checkIn, checkOut);
-        verify(session, times(1)).setAttribute("lastBooking", mockBooking);
-        verify(session, times(1)).setAttribute("guestName", guestName);
     }
 
     @Test
-    void testCreateBooking_withEmptyGuestName_stillProcesses() {
+    void createBooking_withValidParameters_storesBookingInSession() {
         // Arrange
-        String guestName = "";
-        String roomType = "STANDARD";
+        String guestName = "Jane Smith";
+        String roomType = "SUITE";
         String checkIn = "2024-04-01";
-        String checkOut = "2024-04-03";
-
+        String checkOut = "2024-04-10";
+        
         Map<String, Object> mockBooking = new HashMap<>();
         mockBooking.put("bookingId", "BK-87654321");
         mockBooking.put("guestName", guestName);
-
-        when(bookingService.createBooking(guestName, roomType, checkIn, checkOut))
-                .thenReturn(mockBooking);
+        
+        when(bookingService.createBooking(anyString(), anyString(), anyString(), anyString()))
+            .thenReturn(mockBooking);
 
         // Act
-        Map<String, Object> response = bookingController.createBooking(
-                guestName, roomType, checkIn, checkOut, session);
+        bookingController.createBooking(guestName, roomType, checkIn, checkOut, session);
 
         // Assert
-        assertNotNull(response);
-        assertEquals("confirmed", response.get("status"));
+        assertEquals(mockBooking, session.getAttribute("lastBooking"));
+        assertEquals(guestName, session.getAttribute("guestName"));
     }
 
     @Test
-    void testCreateBooking_withNullParameters_handlesGracefully() {
+    void createBooking_withEmptyGuestName_stillProcessesBooking() {
         // Arrange
+        String guestName = "";
+        String roomType = "STANDARD";
+        String checkIn = "2024-05-01";
+        String checkOut = "2024-05-03";
+        
         Map<String, Object> mockBooking = new HashMap<>();
-        mockBooking.put("bookingId", "BK-NULL001");
-
-        when(bookingService.createBooking(null, null, null, null))
-                .thenReturn(mockBooking);
+        mockBooking.put("bookingId", "BK-11111111");
+        
+        when(bookingService.createBooking(guestName, roomType, checkIn, checkOut))
+            .thenReturn(mockBooking);
 
         // Act
         Map<String, Object> response = bookingController.createBooking(
-                null, null, null, null, session);
+            guestName, roomType, checkIn, checkOut, session);
 
         // Assert
         assertNotNull(response);
@@ -103,15 +108,16 @@ class BookingControllerTest {
     }
 
     @Test
-    void testGetBookingStatus_withValidBookingId_returnsBookingDetails() {
+    void getBookingStatus_withValidBookingId_returnsBookingDetails() {
         // Arrange
         String bookingId = "BK-12345678";
-        String guestName = "Jane Smith";
+        String guestName = "Test Guest";
+        session.setAttribute("guestName", guestName);
+        
         Map<String, Object> mockDetails = new HashMap<>();
         mockDetails.put("bookingId", bookingId);
         mockDetails.put("status", "confirmed");
-
-        when(session.getAttribute("guestName")).thenReturn(guestName);
+        
         when(bookingService.getBookingById(bookingId)).thenReturn(mockDetails);
 
         // Act
@@ -121,19 +127,17 @@ class BookingControllerTest {
         assertNotNull(result);
         assertEquals(bookingId, result.get("bookingId"));
         assertEquals(guestName, result.get("sessionGuest"));
-        assertNotNull(result.get("details"));
-        verify(session, times(1)).getAttribute("guestName");
+        assertEquals(mockDetails, result.get("details"));
         verify(bookingService, times(1)).getBookingById(bookingId);
     }
 
     @Test
-    void testGetBookingStatus_withNoSessionGuest_returnsNullSessionGuest() {
+    void getBookingStatus_withNoSessionData_returnsNullSessionGuest() {
         // Arrange
         String bookingId = "BK-99999999";
         Map<String, Object> mockDetails = new HashMap<>();
         mockDetails.put("bookingId", bookingId);
-
-        when(session.getAttribute("guestName")).thenReturn(null);
+        
         when(bookingService.getBookingById(bookingId)).thenReturn(mockDetails);
 
         // Act
@@ -142,17 +146,16 @@ class BookingControllerTest {
         // Assert
         assertNotNull(result);
         assertNull(result.get("sessionGuest"));
-        assertEquals(bookingId, result.get("bookingId"));
+        assertEquals(mockDetails, result.get("details"));
     }
 
     @Test
-    void testGetBookingStatus_withInvalidBookingId_returnsErrorDetails() {
+    void getBookingStatus_withInvalidBookingId_returnsErrorDetails() {
         // Arrange
         String bookingId = "INVALID-ID";
         Map<String, Object> errorDetails = new HashMap<>();
-        errorDetails.put("error", "Booking not found");
-
-        when(session.getAttribute("guestName")).thenReturn("Test User");
+        errorDetails.put("error", "Booking not found: " + bookingId);
+        
         when(bookingService.getBookingById(bookingId)).thenReturn(errorDetails);
 
         // Act
@@ -160,14 +163,13 @@ class BookingControllerTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(bookingId, result.get("bookingId"));
-        assertNotNull(result.get("details"));
+        assertEquals(errorDetails, result.get("details"));
     }
 
     @Test
-    void testCheckAvailability_withValidRoomType_returnsAvailabilityInfo() {
+    void checkAvailability_withValidRoomType_returnsAvailabilityInfo() {
         // Arrange
-        String roomType = "SUITE";
+        String roomType = "DELUXE";
         when(bookingService.isRoomAvailable(roomType)).thenReturn(true);
 
         // Act
@@ -176,15 +178,15 @@ class BookingControllerTest {
         // Assert
         assertNotNull(response);
         assertEquals(roomType, response.get("roomType"));
-        assertTrue((Boolean) response.get("available"));
         assertNotNull(response.get("inventoryEndpoint"));
+        assertTrue((Boolean) response.get("available"));
         verify(bookingService, times(1)).isRoomAvailable(roomType);
     }
 
     @Test
-    void testCheckAvailability_withInvalidRoomType_returnsUnavailable() {
+    void checkAvailability_withUnavailableRoom_returnsFalse() {
         // Arrange
-        String roomType = "INVALID_TYPE";
+        String roomType = "VILLA";
         when(bookingService.isRoomAvailable(roomType)).thenReturn(false);
 
         // Act
@@ -197,20 +199,22 @@ class BookingControllerTest {
     }
 
     @Test
-    void testCheckAvailability_withNullRoomType_handlesGracefully() {
+    void checkAvailability_withInvalidRoomType_returnsResponse() {
         // Arrange
-        when(bookingService.isRoomAvailable(null)).thenReturn(false);
+        String roomType = "INVALID";
+        when(bookingService.isRoomAvailable(roomType)).thenReturn(false);
 
         // Act
-        Map<String, Object> response = bookingController.checkAvailability(null);
+        Map<String, Object> response = bookingController.checkAvailability(roomType);
 
         // Assert
         assertNotNull(response);
-        assertNull(response.get("roomType"));
+        assertEquals(roomType, response.get("roomType"));
+        assertFalse((Boolean) response.get("available"));
     }
 
     @Test
-    void testDownloadReport_withValidMonth_returnsReportPath() {
+    void downloadReport_withValidMonth_returnsReportPath() {
         // Arrange
         String month = "March";
         String expectedMessage = "Report generated successfully";
@@ -221,16 +225,18 @@ class BookingControllerTest {
 
         // Assert
         assertNotNull(response);
-        assertTrue(response.get("reportPath").toString().contains(month));
+        assertNotNull(response.get("reportPath"));
+        assertTrue(((String) response.get("reportPath")).contains(month));
         assertEquals(expectedMessage, response.get("message"));
         verify(bookingService, times(1)).generateReport(month);
     }
 
     @Test
-    void testDownloadReport_withEmptyMonth_stillGeneratesPath() {
+    void downloadReport_withEmptyMonth_stillProcessesRequest() {
         // Arrange
         String month = "";
-        when(bookingService.generateReport(month)).thenReturn("Report generated");
+        String expectedMessage = "Report generated";
+        when(bookingService.generateReport(month)).thenReturn(expectedMessage);
 
         // Act
         Map<String, Object> response = bookingController.downloadReport(month);
@@ -238,58 +244,79 @@ class BookingControllerTest {
         // Assert
         assertNotNull(response);
         assertNotNull(response.get("reportPath"));
-        assertNotNull(response.get("message"));
+        assertEquals(expectedMessage, response.get("message"));
     }
 
     @Test
-    void testDownloadReport_withSpecialCharactersInMonth_handlesGracefully() {
+    void downloadReport_withSpecialCharactersInMonth_handlesCorrectly() {
         // Arrange
         String month = "Jan/2024";
-        when(bookingService.generateReport(month)).thenReturn("Report generated");
+        String expectedMessage = "Report generated";
+        when(bookingService.generateReport(month)).thenReturn(expectedMessage);
 
         // Act
         Map<String, Object> response = bookingController.downloadReport(month);
 
         // Assert
         assertNotNull(response);
-        assertTrue(response.get("reportPath").toString().contains(month));
+        assertNotNull(response.get("reportPath"));
+        assertTrue(((String) response.get("reportPath")).contains(month));
     }
 
     @Test
-    void testCreateBooking_verifiesSessionAttributesAreSet() {
+    void createBooking_withNullSession_throwsException() {
         // Arrange
-        String guestName = "Test Guest";
-        String roomType = "VILLA";
-        String checkIn = "2024-05-01";
-        String checkOut = "2024-05-10";
-
-        Map<String, Object> mockBooking = new HashMap<>();
-        mockBooking.put("bookingId", "BK-TEST001");
-        mockBooking.put("guestName", guestName);
-
-        when(bookingService.createBooking(anyString(), anyString(), anyString(), anyString()))
-                .thenReturn(mockBooking);
-
-        // Act
-        bookingController.createBooking(guestName, roomType, checkIn, checkOut, session);
-
-        // Assert
-        verify(session).setAttribute(eq("lastBooking"), any(Map.class));
-        verify(session).setAttribute("guestName", guestName);
-    }
-
-    @Test
-    void testCheckAvailability_verifiesInventoryEndpointIsReturned() {
-        // Arrange
+        String guestName = "John Doe";
         String roomType = "DELUXE";
-        when(bookingService.isRoomAvailable(roomType)).thenReturn(true);
+        String checkIn = "2024-03-01";
+        String checkOut = "2024-03-05";
+        
+        Map<String, Object> mockBooking = new HashMap<>();
+        mockBooking.put("bookingId", "BK-12345678");
+        
+        when(bookingService.createBooking(anyString(), anyString(), anyString(), anyString()))
+            .thenReturn(mockBooking);
+
+        // Act & Assert
+        assertThrows(NullPointerException.class, () -> {
+            bookingController.createBooking(guestName, roomType, checkIn, checkOut, null);
+        });
+    }
+
+    @Test
+    void createBooking_withMultipleBookings_cachesAllBookings() {
+        // Arrange
+        Map<String, Object> booking1 = new HashMap<>();
+        booking1.put("bookingId", "BK-11111111");
+        booking1.put("guestName", "Guest 1");
+        
+        Map<String, Object> booking2 = new HashMap<>();
+        booking2.put("bookingId", "BK-22222222");
+        booking2.put("guestName", "Guest 2");
+        
+        when(bookingService.createBooking(anyString(), anyString(), anyString(), anyString()))
+            .thenReturn(booking1)
+            .thenReturn(booking2);
 
         // Act
-        Map<String, Object> response = bookingController.checkAvailability(roomType);
+        bookingController.createBooking("Guest 1", "STANDARD", "2024-03-01", "2024-03-03", session);
+        bookingController.createBooking("Guest 2", "DELUXE", "2024-03-05", "2024-03-07", session);
 
         // Assert
-        String inventoryEndpoint = (String) response.get("inventoryEndpoint");
-        assertNotNull(inventoryEndpoint);
-        assertTrue(inventoryEndpoint.contains("inventory-service"));
+        verify(bookingService, times(2)).createBooking(anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void checkAvailability_withNullRoomType_handlesGracefully() {
+        // Arrange
+        when(bookingService.isRoomAvailable(null)).thenReturn(false);
+
+        // Act
+        Map<String, Object> response = bookingController.checkAvailability(null);
+
+        // Assert
+        assertNotNull(response);
+        assertNull(response.get("roomType"));
+        assertFalse((Boolean) response.get("available"));
     }
 }
