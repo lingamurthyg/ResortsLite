@@ -1,220 +1,130 @@
 package com.demo.resortslite;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.SpringApplication;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
 class ResortsLiteApplicationTest {
 
+    @Autowired
+    private ApplicationContext applicationContext;
+
     @Test
-    void main_startsSpringApplication() {
-        // This test verifies the main method exists and can be called
-        // In a real scenario, we would mock SpringApplication.run()
+    void testContextLoads() {
+        // Assert that the application context loads successfully
+        assertNotNull(applicationContext);
+    }
+
+    @Test
+    void testMainMethodExists() {
+        // Verify that the main method exists and can be invoked
         assertDoesNotThrow(() -> {
-            // Verify the class has a main method
             ResortsLiteApplication.class.getMethod("main", String[].class);
         });
     }
 
     @Test
-    void applicationClass_hasSpringBootApplicationAnnotation() {
-        // Arrange & Act
-        boolean hasAnnotation = ResortsLiteApplication.class
-                .isAnnotationPresent(org.springframework.boot.autoconfigure.SpringBootApplication.class);
-
-        // Assert
-        assertTrue(hasAnnotation, "ResortsLiteApplication should have @SpringBootApplication annotation");
+    void testApplicationContextContainsBookingController() {
+        // Verify that BookingController bean is registered
+        assertTrue(applicationContext.containsBean("bookingController"));
     }
 
     @Test
-    void applicationClass_isPublic() {
-        // Arrange & Act
-        int modifiers = ResortsLiteApplication.class.getModifiers();
-
-        // Assert
-        assertTrue(java.lang.reflect.Modifier.isPublic(modifiers),
-                "ResortsLiteApplication class should be public");
+    void testApplicationContextContainsBookingService() {
+        // Verify that BookingService bean is registered
+        assertTrue(applicationContext.containsBean("bookingService"));
     }
 
     @Test
-    void mainMethod_isPublic() throws NoSuchMethodException {
-        // Arrange
-        java.lang.reflect.Method mainMethod = ResortsLiteApplication.class.getMethod("main", String[].class);
-
-        // Act
-        int modifiers = mainMethod.getModifiers();
-
-        // Assert
-        assertTrue(java.lang.reflect.Modifier.isPublic(modifiers),
-                "main method should be public");
+    void testApplicationContextContainsReportService() {
+        // Verify that ReportService bean is registered
+        assertTrue(applicationContext.containsBean("reportService"));
     }
 
     @Test
-    void mainMethod_isStatic() throws NoSuchMethodException {
-        // Arrange
-        java.lang.reflect.Method mainMethod = ResortsLiteApplication.class.getMethod("main", String[].class);
-
-        // Act
-        int modifiers = mainMethod.getModifiers();
-
-        // Assert
-        assertTrue(java.lang.reflect.Modifier.isStatic(modifiers),
-                "main method should be static");
+    void testBookingControllerBeanIsNotNull() {
+        // Verify that BookingController can be retrieved from context
+        BookingController controller = applicationContext.getBean(BookingController.class);
+        assertNotNull(controller);
     }
 
     @Test
-    void mainMethod_returnsVoid() throws NoSuchMethodException {
-        // Arrange
-        java.lang.reflect.Method mainMethod = ResortsLiteApplication.class.getMethod("main", String[].class);
-
-        // Act
-        Class<?> returnType = mainMethod.getReturnType();
-
-        // Assert
-        assertEquals(void.class, returnType, "main method should return void");
+    void testBookingServiceBeanIsNotNull() {
+        // Verify that BookingService can be retrieved from context
+        BookingService service = applicationContext.getBean(BookingService.class);
+        assertNotNull(service);
     }
 
     @Test
-    void mainMethod_acceptsStringArrayParameter() throws NoSuchMethodException {
-        // Arrange
-        java.lang.reflect.Method mainMethod = ResortsLiteApplication.class.getMethod("main", String[].class);
-
-        // Act
-        Class<?>[] parameterTypes = mainMethod.getParameterTypes();
-
-        // Assert
-        assertEquals(1, parameterTypes.length, "main method should have exactly one parameter");
-        assertEquals(String[].class, parameterTypes[0], "main method parameter should be String[]");
+    void testReportServiceBeanIsNotNull() {
+        // Verify that ReportService can be retrieved from context
+        ReportService service = applicationContext.getBean(ReportService.class);
+        assertNotNull(service);
     }
 
     @Test
-    void applicationClass_hasDefaultConstructor() {
-        // Act & Assert
-        assertDoesNotThrow(() -> {
-            ResortsLiteApplication app = new ResortsLiteApplication();
-            assertNotNull(app);
-        }, "ResortsLiteApplication should have a default constructor");
+    void testSpringBootApplicationAnnotationPresent() {
+        // Verify that the @SpringBootApplication annotation is present
+        assertTrue(ResortsLiteApplication.class.isAnnotationPresent(SpringBootApplication.class));
     }
 
     @Test
-    void applicationClass_canBeInstantiated() {
-        // Act
-        ResortsLiteApplication app = new ResortsLiteApplication();
-
-        // Assert
-        assertNotNull(app, "ResortsLiteApplication instance should not be null");
-        assertTrue(app instanceof ResortsLiteApplication,
-                "Instance should be of type ResortsLiteApplication");
+    void testApplicationHasPublicMainMethod() throws NoSuchMethodException {
+        // Verify that main method is public and static
+        var mainMethod = ResortsLiteApplication.class.getMethod("main", String[].class);
+        assertTrue(java.lang.reflect.Modifier.isPublic(mainMethod.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isStatic(mainMethod.getModifiers()));
     }
 
     @Test
-    void applicationClass_isInCorrectPackage() {
-        // Arrange
-        String expectedPackage = "com.demo.resortslite";
-
-        // Act
-        String actualPackage = ResortsLiteApplication.class.getPackage().getName();
-
-        // Assert
-        assertEquals(expectedPackage, actualPackage,
-                "ResortsLiteApplication should be in package com.demo.resortslite");
+    void testMainMethodAcceptsStringArray() throws NoSuchMethodException {
+        // Verify that main method accepts String[] as parameter
+        var mainMethod = ResortsLiteApplication.class.getMethod("main", String[].class);
+        assertEquals(1, mainMethod.getParameterCount());
+        assertEquals(String[].class, mainMethod.getParameterTypes()[0]);
     }
 
     @Test
-    void applicationClass_hasCorrectSimpleName() {
-        // Act
-        String simpleName = ResortsLiteApplication.class.getSimpleName();
-
-        // Assert
-        assertEquals("ResortsLiteApplication", simpleName,
-                "Class simple name should be ResortsLiteApplication");
+    void testMainMethodReturnsVoid() throws NoSuchMethodException {
+        // Verify that main method returns void
+        var mainMethod = ResortsLiteApplication.class.getMethod("main", String[].class);
+        assertEquals(void.class, mainMethod.getReturnType());
     }
 
     @Test
-    void mainMethod_exists() {
-        // Act & Assert
-        assertDoesNotThrow(() -> {
-            ResortsLiteApplication.class.getDeclaredMethod("main", String[].class);
-        }, "main method should exist");
+    void testApplicationContextIsActive() {
+        // Verify that the application context is active
+        if (applicationContext instanceof ConfigurableApplicationContext) {
+            assertTrue(((ConfigurableApplicationContext) applicationContext).isActive());
+        } else {
+            // If not ConfigurableApplicationContext, just verify it's not null
+            assertNotNull(applicationContext);
+        }
     }
 
     @Test
-    void applicationClass_isNotAbstract() {
-        // Arrange & Act
-        int modifiers = ResortsLiteApplication.class.getModifiers();
-
-        // Assert
-        assertFalse(java.lang.reflect.Modifier.isAbstract(modifiers),
-                "ResortsLiteApplication should not be abstract");
+    void testApplicationContextBeanDefinitionCount() {
+        // Verify that the application context has bean definitions
+        int beanCount = applicationContext.getBeanDefinitionCount();
+        assertTrue(beanCount > 0, "Application context should have at least one bean definition");
     }
 
     @Test
-    void applicationClass_isNotInterface() {
-        // Act & Assert
-        assertFalse(ResortsLiteApplication.class.isInterface(),
-                "ResortsLiteApplication should not be an interface");
+    void testJdbcTemplateIsConfigured() {
+        // Verify that JdbcTemplate is available in the context
+        assertTrue(applicationContext.containsBean("jdbcTemplate"));
     }
 
     @Test
-    void applicationClass_isNotEnum() {
-        // Act & Assert
-        assertFalse(ResortsLiteApplication.class.isEnum(),
-                "ResortsLiteApplication should not be an enum");
-    }
-
-    @Test
-    void applicationClass_hasNoSuperclassOtherThanObject() {
-        // Act
-        Class<?> superclass = ResortsLiteApplication.class.getSuperclass();
-
-        // Assert
-        assertEquals(Object.class, superclass,
-                "ResortsLiteApplication should only extend Object");
-    }
-
-    @Test
-    void applicationClass_implementsNoInterfaces() {
-        // Act
-        Class<?>[] interfaces = ResortsLiteApplication.class.getInterfaces();
-
-        // Assert
-        assertEquals(0, interfaces.length,
-                "ResortsLiteApplication should not implement any interfaces");
-    }
-
-    @Test
-    void applicationClass_hasOnlyOnePublicMethod() {
-        // Act
-        java.lang.reflect.Method[] publicMethods = ResortsLiteApplication.class.getDeclaredMethods();
-        long publicMethodCount = java.util.Arrays.stream(publicMethods)
-                .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
-                .count();
-
-        // Assert
-        assertEquals(1, publicMethodCount,
-                "ResortsLiteApplication should have exactly one public method (main)");
-    }
-
-    @Test
-    void multipleInstances_canBeCreated() {
-        // Act
-        ResortsLiteApplication app1 = new ResortsLiteApplication();
-        ResortsLiteApplication app2 = new ResortsLiteApplication();
-
-        // Assert
-        assertNotNull(app1);
-        assertNotNull(app2);
-        assertNotSame(app1, app2, "Each instantiation should create a new object");
-    }
-
-    @Test
-    void applicationClass_hasCorrectCanonicalName() {
-        // Act
-        String canonicalName = ResortsLiteApplication.class.getCanonicalName();
-
-        // Assert
-        assertEquals("com.demo.resortslite.ResortsLiteApplication", canonicalName,
-                "Canonical name should be fully qualified");
+    void testApplicationNameIsCorrect() {
+        // Verify application name from context
+        String applicationName = applicationContext.getApplicationName();
+        assertNotNull(applicationName);
     }
 }
