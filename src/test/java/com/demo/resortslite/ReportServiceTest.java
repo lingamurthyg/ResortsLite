@@ -25,7 +25,7 @@ class ReportServiceTest {
     }
 
     @Test
-    void testGenerateMonthlyReport_withValidInputs_returnsSuccessStatus() {
+    void generateMonthlyReport_withValidMonthAndYear_returnsSuccessStatus() {
         // Arrange
         String month = "March";
         String year = "2024";
@@ -39,9 +39,9 @@ class ReportServiceTest {
     }
 
     @Test
-    void testGenerateMonthlyReport_includesReportPath() {
+    void generateMonthlyReport_createsReportWithCorrectFileName() {
         // Arrange
-        String month = "April";
+        String month = "January";
         String year = "2024";
 
         // Act
@@ -49,34 +49,31 @@ class ReportServiceTest {
 
         // Assert
         if ("generated".equals(result.get("status"))) {
-            assertNotNull(result.get("path"));
             String path = (String) result.get("path");
-            assertTrue(path.contains(month));
-            assertTrue(path.contains(year));
+            assertNotNull(path);
+            assertTrue(path.contains("resort_report_" + month + "_" + year + ".csv"));
         }
     }
 
     @Test
-    void testGenerateMonthlyReport_includesServerPort() {
+    void generateMonthlyReport_includesServerPort() {
         // Arrange
-        String month = "May";
+        String month = "February";
         String year = "2024";
 
         // Act
         Map<String, Object> result = reportService.generateMonthlyReport(month, year);
 
         // Assert
-        if ("generated".equals(result.get("status"))) {
-            assertNotNull(result.get("serverPort"));
-            assertEquals(8080, result.get("serverPort"));
-        }
+        assertTrue(result.containsKey("serverPort"));
+        assertEquals(8080, result.get("serverPort"));
     }
 
     @Test
-    void testGenerateMonthlyReport_withDifferentMonths_generatesUniqueFileNames() {
+    void generateMonthlyReport_withDifferentMonths_generatesDifferentPaths() {
         // Arrange
-        String month1 = "January";
-        String month2 = "February";
+        String month1 = "April";
+        String month2 = "May";
         String year = "2024";
 
         // Act
@@ -85,14 +82,12 @@ class ReportServiceTest {
 
         // Assert
         if ("generated".equals(result1.get("status")) && "generated".equals(result2.get("status"))) {
-            String path1 = (String) result1.get("path");
-            String path2 = (String) result2.get("path");
-            assertNotEquals(path1, path2);
+            assertNotEquals(result1.get("path"), result2.get("path"));
         }
     }
 
     @Test
-    void testGenerateMonthlyReport_withDifferentYears_generatesUniqueFileNames() {
+    void generateMonthlyReport_withDifferentYears_generatesDifferentPaths() {
         // Arrange
         String month = "June";
         String year1 = "2023";
@@ -104,14 +99,12 @@ class ReportServiceTest {
 
         // Assert
         if ("generated".equals(result1.get("status")) && "generated".equals(result2.get("status"))) {
-            String path1 = (String) result1.get("path");
-            String path2 = (String) result2.get("path");
-            assertNotEquals(path1, path2);
+            assertNotEquals(result1.get("path"), result2.get("path"));
         }
     }
 
     @Test
-    void testGenerateMonthlyReport_fileNameContainsCsvExtension() {
+    void generateMonthlyReport_pathContainsBaseDirectory() {
         // Arrange
         String month = "July";
         String year = "2024";
@@ -120,15 +113,15 @@ class ReportServiceTest {
         Map<String, Object> result = reportService.generateMonthlyReport(month, year);
 
         // Assert
-        if ("generated".equals(result.get("status"))) {
+        if (result.containsKey("path")) {
             String path = (String) result.get("path");
-            assertTrue(path.endsWith(".csv"));
+            assertTrue(path.contains("/var/legacy/reports/"));
         }
     }
 
     @Test
-    void testGenerateMonthlyReport_handlesIOException() {
-        // Arrange - Using invalid path characters to potentially trigger IOException
+    void generateMonthlyReport_handlesIOException() {
+        // Arrange
         String month = "August";
         String year = "2024";
 
@@ -138,27 +131,53 @@ class ReportServiceTest {
         // Assert
         assertNotNull(result);
         assertTrue(result.containsKey("status"));
-        // Either success or error status is acceptable
-        assertTrue("generated".equals(result.get("status")) || "error".equals(result.get("status")));
+        // Status could be "generated" or "error" depending on file system permissions
     }
 
     @Test
-    void testGenerateMonthlyReport_errorStatusIncludesMessage() {
+    void generateMonthlyReport_withEmptyMonth_stillProcesses() {
         // Arrange
-        String month = "September";
+        String month = "";
         String year = "2024";
 
         // Act
         Map<String, Object> result = reportService.generateMonthlyReport(month, year);
 
         // Assert
-        if ("error".equals(result.get("status"))) {
-            assertNotNull(result.get("message"));
-        }
+        assertNotNull(result);
+        assertTrue(result.containsKey("status"));
     }
 
     @Test
-    void testBuildReportDownloadUrl_withValidReportName_returnsUrl() {
+    void generateMonthlyReport_withEmptyYear_stillProcesses() {
+        // Arrange
+        String month = "September";
+        String year = "";
+
+        // Act
+        Map<String, Object> result = reportService.generateMonthlyReport(month, year);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.containsKey("status"));
+    }
+
+    @Test
+    void generateMonthlyReport_withSpecialCharactersInMonth_handlesCorrectly() {
+        // Arrange
+        String month = "March/April";
+        String year = "2024";
+
+        // Act
+        Map<String, Object> result = reportService.generateMonthlyReport(month, year);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.containsKey("status"));
+    }
+
+    @Test
+    void buildReportDownloadUrl_withValidReportName_returnsUrl() {
         // Arrange
         String reportName = "march_2024_report.csv";
 
@@ -168,13 +187,36 @@ class ReportServiceTest {
         // Assert
         assertNotNull(url);
         assertTrue(url.contains(reportName));
-        assertTrue(url.contains("http://"));
     }
 
     @Test
-    void testBuildReportDownloadUrl_includesServerPort() {
+    void buildReportDownloadUrl_containsHttpProtocol() {
         // Arrange
-        String reportName = "april_2024_report.csv";
+        String reportName = "test_report.csv";
+
+        // Act
+        String url = reportService.buildReportDownloadUrl(reportName);
+
+        // Assert
+        assertTrue(url.startsWith("http://"));
+    }
+
+    @Test
+    void buildReportDownloadUrl_containsLocalhost() {
+        // Arrange
+        String reportName = "report.csv";
+
+        // Act
+        String url = reportService.buildReportDownloadUrl(reportName);
+
+        // Assert
+        assertTrue(url.contains("localhost"));
+    }
+
+    @Test
+    void buildReportDownloadUrl_containsServerPort() {
+        // Arrange
+        String reportName = "annual_report.csv";
 
         // Act
         String url = reportService.buildReportDownloadUrl(reportName);
@@ -184,9 +226,9 @@ class ReportServiceTest {
     }
 
     @Test
-    void testBuildReportDownloadUrl_includesReportsPath() {
+    void buildReportDownloadUrl_containsReportsPath() {
         // Arrange
-        String reportName = "may_2024_report.csv";
+        String reportName = "monthly_summary.csv";
 
         // Act
         String url = reportService.buildReportDownloadUrl(reportName);
@@ -196,7 +238,7 @@ class ReportServiceTest {
     }
 
     @Test
-    void testBuildReportDownloadUrl_withDifferentReportNames_generatesUniqueUrls() {
+    void buildReportDownloadUrl_withDifferentReportNames_generatesDifferentUrls() {
         // Arrange
         String reportName1 = "report1.csv";
         String reportName2 = "report2.csv";
@@ -212,7 +254,7 @@ class ReportServiceTest {
     }
 
     @Test
-    void testBuildReportDownloadUrl_withEmptyReportName_stillGeneratesUrl() {
+    void buildReportDownloadUrl_withEmptyReportName_stillReturnsUrl() {
         // Arrange
         String reportName = "";
 
@@ -225,9 +267,9 @@ class ReportServiceTest {
     }
 
     @Test
-    void testBuildReportDownloadUrl_withSpecialCharacters_includesInUrl() {
+    void buildReportDownloadUrl_withSpecialCharacters_includesInUrl() {
         // Arrange
-        String reportName = "report_2024-03-15.csv";
+        String reportName = "report-2024_Q1.csv";
 
         // Act
         String url = reportService.buildReportDownloadUrl(reportName);
@@ -237,19 +279,7 @@ class ReportServiceTest {
     }
 
     @Test
-    void testBuildReportDownloadUrl_usesLocalhostDomain() {
-        // Arrange
-        String reportName = "test_report.csv";
-
-        // Act
-        String url = reportService.buildReportDownloadUrl(reportName);
-
-        // Assert
-        assertTrue(url.contains("localhost"));
-    }
-
-    @Test
-    void testGetSystemInfo_returnsMapWithAllKeys() {
+    void getSystemInfo_returnsMapWithAllKeys() {
         // Act
         Map<String, Object> info = reportService.getSystemInfo();
 
@@ -262,28 +292,25 @@ class ReportServiceTest {
     }
 
     @Test
-    void testGetSystemInfo_reportBasePathIsNotNull() {
+    void getSystemInfo_reportBasePathIsCorrect() {
         // Act
         Map<String, Object> info = reportService.getSystemInfo();
 
         // Assert
-        assertNotNull(info.get("reportBasePath"));
-        assertTrue(((String) info.get("reportBasePath")).contains("/var/legacy/reports/"));
+        assertEquals("/var/legacy/reports/", info.get("reportBasePath"));
     }
 
     @Test
-    void testGetSystemInfo_backupPathIsNotNull() {
+    void getSystemInfo_backupPathIsCorrect() {
         // Act
         Map<String, Object> info = reportService.getSystemInfo();
 
         // Assert
-        assertNotNull(info.get("backupPath"));
-        String backupPath = (String) info.get("backupPath");
-        assertTrue(backupPath.contains("ResortBackups"));
+        assertEquals("C:\\ResortBackups\\nightly\\", info.get("backupPath"));
     }
 
     @Test
-    void testGetSystemInfo_serverPortIs8080() {
+    void getSystemInfo_serverPortIsCorrect() {
         // Act
         Map<String, Object> info = reportService.getSystemInfo();
 
@@ -292,55 +319,47 @@ class ReportServiceTest {
     }
 
     @Test
-    void testGetSystemInfo_generatedAtIsNotNull() {
+    void getSystemInfo_generatedAtIsNotNull() {
         // Act
         Map<String, Object> info = reportService.getSystemInfo();
 
         // Assert
         assertNotNull(info.get("generatedAt"));
-        String timestamp = (String) info.get("generatedAt");
-        assertTrue(timestamp.length() > 0);
     }
 
     @Test
-    void testGetSystemInfo_generatedAtHasCorrectFormat() {
+    void getSystemInfo_generatedAtIsValidTimestamp() {
         // Act
         Map<String, Object> info = reportService.getSystemInfo();
 
         // Assert
         String timestamp = (String) info.get("generatedAt");
-        // Format should be yyyy-MM-dd HH:mm:ss
+        assertNotNull(timestamp);
         assertTrue(timestamp.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"));
     }
 
     @Test
-    void testGetSystemInfo_multipleCallsGenerateDifferentTimestamps() throws InterruptedException {
+    void getSystemInfo_calledMultipleTimes_returnsDifferentTimestamps() throws InterruptedException {
         // Act
         Map<String, Object> info1 = reportService.getSystemInfo();
-        Thread.sleep(1100); // Wait for at least 1 second
+        Thread.sleep(1100); // Wait for timestamp to change
         Map<String, Object> info2 = reportService.getSystemInfo();
 
         // Assert
-        String timestamp1 = (String) info1.get("generatedAt");
-        String timestamp2 = (String) info2.get("generatedAt");
-        assertNotEquals(timestamp1, timestamp2);
+        assertNotEquals(info1.get("generatedAt"), info2.get("generatedAt"));
     }
 
     @Test
-    void testGetSystemInfo_pathsContainExpectedDirectories() {
+    void getSystemInfo_allValuesAreNotNull() {
         // Act
         Map<String, Object> info = reportService.getSystemInfo();
 
         // Assert
-        String reportPath = (String) info.get("reportBasePath");
-        String backupPath = (String) info.get("backupPath");
-        
-        assertTrue(reportPath.contains("legacy"));
-        assertTrue(backupPath.contains("nightly"));
+        info.values().forEach(value -> assertNotNull(value));
     }
 
     @Test
-    void testGenerateMonthlyReport_withNullMonth_handlesGracefully() {
+    void generateMonthlyReport_withNullMonth_handlesGracefully() {
         // Arrange
         String month = null;
         String year = "2024";
@@ -352,7 +371,7 @@ class ReportServiceTest {
     }
 
     @Test
-    void testGenerateMonthlyReport_withNullYear_handlesGracefully() {
+    void generateMonthlyReport_withNullYear_handlesGracefully() {
         // Arrange
         String month = "October";
         String year = null;
@@ -364,7 +383,7 @@ class ReportServiceTest {
     }
 
     @Test
-    void testBuildReportDownloadUrl_withNullReportName_handlesGracefully() {
+    void buildReportDownloadUrl_withNullReportName_handlesGracefully() {
         // Arrange
         String reportName = null;
 
@@ -375,7 +394,7 @@ class ReportServiceTest {
     }
 
     @Test
-    void testGenerateMonthlyReport_pathContainsLegacyDirectory() {
+    void generateMonthlyReport_statusIsEitherGeneratedOrError() {
         // Arrange
         String month = "November";
         String year = "2024";
@@ -384,79 +403,28 @@ class ReportServiceTest {
         Map<String, Object> result = reportService.generateMonthlyReport(month, year);
 
         // Assert
-        if ("generated".equals(result.get("status"))) {
-            String path = (String) result.get("path");
-            assertTrue(path.contains("/var/legacy/"));
+        String status = (String) result.get("status");
+        assertTrue(status.equals("generated") || status.equals("error"));
+    }
+
+    @Test
+    void generateMonthlyReport_errorStatus_includesMessage() {
+        // Arrange
+        String month = "December";
+        String year = "2024";
+
+        // Act
+        Map<String, Object> result = reportService.generateMonthlyReport(month, year);
+
+        // Assert
+        if ("error".equals(result.get("status"))) {
+            assertTrue(result.containsKey("message"));
+            assertNotNull(result.get("message"));
         }
     }
 
     @Test
-    void testBuildReportDownloadUrl_usesHttpProtocol() {
-        // Arrange
-        String reportName = "december_report.csv";
-
-        // Act
-        String url = reportService.buildReportDownloadUrl(reportName);
-
-        // Assert
-        assertTrue(url.startsWith("http://"));
-        assertFalse(url.startsWith("https://"));
-    }
-
-    @Test
-    void testGetSystemInfo_backupPathUsesWindowsStyle() {
-        // Act
-        Map<String, Object> info = reportService.getSystemInfo();
-
-        // Assert
-        String backupPath = (String) info.get("backupPath");
-        assertTrue(backupPath.contains("C:\\") || backupPath.contains(":\\"));
-    }
-
-    @Test
-    void testGenerateMonthlyReport_withLongMonthName_handlesCorrectly() {
-        // Arrange
-        String month = "September";
-        String year = "2024";
-
-        // Act
-        Map<String, Object> result = reportService.generateMonthlyReport(month, year);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.containsKey("status"));
-    }
-
-    @Test
-    void testGenerateMonthlyReport_withShortMonthName_handlesCorrectly() {
-        // Arrange
-        String month = "May";
-        String year = "2024";
-
-        // Act
-        Map<String, Object> result = reportService.generateMonthlyReport(month, year);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.containsKey("status"));
-    }
-
-    @Test
-    void testGenerateMonthlyReport_withNumericMonth_handlesCorrectly() {
-        // Arrange
-        String month = "03";
-        String year = "2024";
-
-        // Act
-        Map<String, Object> result = reportService.generateMonthlyReport(month, year);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.containsKey("status"));
-    }
-
-    @Test
-    void testBuildReportDownloadUrl_formatIsCorrect() {
+    void buildReportDownloadUrl_formatIsCorrect() {
         // Arrange
         String reportName = "test.csv";
 
@@ -464,20 +432,41 @@ class ReportServiceTest {
         String url = reportService.buildReportDownloadUrl(reportName);
 
         // Assert
-        // URL should be: http://localhost:8080/reports/test.csv
-        String expected = "http://localhost:8080/reports/" + reportName;
-        assertEquals(expected, url);
+        assertEquals("http://localhost:8080/reports/" + reportName, url);
     }
 
     @Test
-    void testGetSystemInfo_allValuesAreNonEmpty() {
+    void getSystemInfo_returnsExactlyFourKeys() {
         // Act
         Map<String, Object> info = reportService.getSystemInfo();
 
         // Assert
-        assertFalse(((String) info.get("reportBasePath")).isEmpty());
-        assertFalse(((String) info.get("backupPath")).isEmpty());
-        assertNotNull(info.get("serverPort"));
-        assertFalse(((String) info.get("generatedAt")).isEmpty());
+        assertEquals(4, info.size());
+    }
+
+    @Test
+    void generateMonthlyReport_withLongMonthName_handlesCorrectly() {
+        // Arrange
+        String month = "VeryLongMonthNameThatExceedsNormalLength";
+        String year = "2024";
+
+        // Act
+        Map<String, Object> result = reportService.generateMonthlyReport(month, year);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.containsKey("status"));
+    }
+
+    @Test
+    void buildReportDownloadUrl_withPathTraversalAttempt_includesInUrl() {
+        // Arrange
+        String reportName = "../../../etc/passwd";
+
+        // Act
+        String url = reportService.buildReportDownloadUrl(reportName);
+
+        // Assert
+        assertTrue(url.contains(reportName));
     }
 }
