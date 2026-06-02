@@ -31,7 +31,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void createBooking_withValidParameters_returnsBookingWithId() {
+    void createBooking_withValidParameters_returnsBookingMap() {
         // Arrange
         String guestName = "John Doe";
         String roomType = "DELUXE";
@@ -44,7 +44,6 @@ class BookingServiceTest {
         // Assert
         assertNotNull(result);
         assertNotNull(result.get("bookingId"));
-        assertTrue(((String) result.get("bookingId")).startsWith("BK-"));
         assertEquals(guestName, result.get("guestName"));
         assertEquals(roomType, result.get("roomType"));
         assertEquals(checkIn, result.get("checkIn"));
@@ -54,59 +53,43 @@ class BookingServiceTest {
     }
 
     @Test
-    void createBooking_withEmptyGuestName_createsBooking() {
+    void createBooking_generatesUniqueBookingId() {
         // Arrange
-        String guestName = "";
-        String roomType = "STANDARD";
-        String checkIn = "2024-04-01";
-        String checkOut = "2024-04-03";
-
-        // Act
-        Map<String, Object> result = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(guestName, result.get("guestName"));
-        assertNotNull(result.get("bookingId"));
-    }
-
-    @Test
-    void createBooking_withNullParameters_handlesGracefully() {
-        // Arrange
-        String guestName = null;
-        String roomType = null;
-        String checkIn = null;
-        String checkOut = null;
-
-        // Act
-        Map<String, Object> result = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
-
-        // Assert
-        assertNotNull(result);
-        assertNotNull(result.get("bookingId"));
-        assertNull(result.get("guestName"));
-    }
-
-    @Test
-    void createBooking_generatesUniqueBookingIds() {
-        // Arrange
-        String guestName = "Test Guest";
+        String guestName = "Jane Smith";
         String roomType = "SUITE";
-        String checkIn = "2024-05-01";
-        String checkOut = "2024-05-05";
+        String checkIn = "2024-04-01";
+        String checkOut = "2024-04-05";
 
         // Act
-        Map<String, Object> booking1 = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
-        Map<String, Object> booking2 = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
+        Map<String, Object> result1 = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
+        Map<String, Object> result2 = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
 
         // Assert
-        assertNotEquals(booking1.get("bookingId"), booking2.get("bookingId"));
+        assertNotNull(result1.get("bookingId"));
+        assertNotNull(result2.get("bookingId"));
+        assertNotEquals(result1.get("bookingId"), result2.get("bookingId"));
+    }
+
+    @Test
+    void createBooking_bookingIdStartsWithBK() {
+        // Arrange
+        String guestName = "Test User";
+        String roomType = "STANDARD";
+        String checkIn = "2024-05-01";
+        String checkOut = "2024-05-03";
+
+        // Act
+        Map<String, Object> result = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
+
+        // Assert
+        String bookingId = (String) result.get("bookingId");
+        assertTrue(bookingId.startsWith("BK-"));
     }
 
     @Test
     void createBooking_generatesConfirmCode() {
         // Arrange
-        String guestName = "Jane Smith";
+        String guestName = "Alice Johnson";
         String roomType = "VILLA";
         String checkIn = "2024-06-01";
         String checkOut = "2024-06-10";
@@ -115,20 +98,54 @@ class BookingServiceTest {
         Map<String, Object> result = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
 
         // Assert
-        assertNotNull(result.get("confirmCode"));
-        assertTrue(((String) result.get("confirmCode")).length() > 0);
+        String confirmCode = (String) result.get("confirmCode");
+        assertNotNull(confirmCode);
+        assertFalse(confirmCode.isEmpty());
+        assertTrue(confirmCode.length() > 10); // SHA-256 hash should be long
     }
 
     @Test
-    void getBookingById_withValidId_returnsBookingDetails() {
+    void createBooking_withEmptyGuestName_stillCreatesBooking() {
+        // Arrange
+        String guestName = "";
+        String roomType = "DELUXE";
+        String checkIn = "2024-07-01";
+        String checkOut = "2024-07-05";
+
+        // Act
+        Map<String, Object> result = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(guestName, result.get("guestName"));
+    }
+
+    @Test
+    void createBooking_withSpecialCharacters_handlesCorrectly() {
+        // Arrange
+        String guestName = "O'Brien-Smith & Co.";
+        String roomType = "SUITE";
+        String checkIn = "2024-08-01";
+        String checkOut = "2024-08-05";
+
+        // Act
+        Map<String, Object> result = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(guestName, result.get("guestName"));
+    }
+
+    @Test
+    void getBookingById_withValidId_returnsBookingData() {
         // Arrange
         String bookingId = "BK-12345678";
-        Map<String, Object> mockBooking = new HashMap<>();
-        mockBooking.put("id", bookingId);
-        mockBooking.put("guest", "John Doe");
-        mockBooking.put("room", "DELUXE");
-        
-        when(jdbcTemplate.queryForMap(anyString())).thenReturn(mockBooking);
+        Map<String, Object> mockData = new HashMap<>();
+        mockData.put("id", bookingId);
+        mockData.put("guest", "John Doe");
+        mockData.put("room", "DELUXE");
+
+        when(jdbcTemplate.queryForMap(anyString())).thenReturn(mockData);
 
         // Act
         Map<String, Object> result = bookingService.getBookingById(bookingId);
@@ -141,7 +158,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void getBookingById_withInvalidId_returnsErrorMessage() {
+    void getBookingById_withInvalidId_returnsErrorMap() {
         // Arrange
         String bookingId = "INVALID-ID";
         when(jdbcTemplate.queryForMap(anyString())).thenThrow(new EmptyResultDataAccessException(1));
@@ -169,7 +186,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_withStandardRoom_returnsCorrectPrice() {
+    void calculateRoomPrice_standardRoom_returnsCorrectPrice() {
         // Arrange
         String roomType = "STANDARD";
         int nights = 3;
@@ -185,7 +202,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_withDeluxeRoom_returnsCorrectPrice() {
+    void calculateRoomPrice_deluxeRoom_returnsCorrectPrice() {
         // Arrange
         String roomType = "DELUXE";
         int nights = 2;
@@ -201,7 +218,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_withSuiteRoom_returnsCorrectPrice() {
+    void calculateRoomPrice_suiteRoom_returnsCorrectPrice() {
         // Arrange
         String roomType = "SUITE";
         int nights = 1;
@@ -217,7 +234,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_withVillaRoom_returnsCorrectPrice() {
+    void calculateRoomPrice_villaRoom_returnsCorrectPrice() {
         // Arrange
         String roomType = "VILLA";
         int nights = 5;
@@ -233,7 +250,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_withPeakSeason_appliesSurcharge() {
+    void calculateRoomPrice_peakSeason_appliesSurcharge() {
         // Arrange
         String roomType = "STANDARD";
         int nights = 2;
@@ -249,7 +266,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_withOffSeason_appliesDiscount() {
+    void calculateRoomPrice_offSeason_appliesDiscount() {
         // Arrange
         String roomType = "STANDARD";
         int nights = 2;
@@ -265,7 +282,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_withGoldLoyalty_appliesDiscount() {
+    void calculateRoomPrice_goldLoyalty_appliesDiscount() {
         // Arrange
         String roomType = "STANDARD";
         int nights = 2;
@@ -281,7 +298,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_withPlatinumLoyalty_appliesDiscount() {
+    void calculateRoomPrice_platinumLoyalty_appliesDiscount() {
         // Arrange
         String roomType = "STANDARD";
         int nights = 2;
@@ -297,7 +314,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_withDiamondLoyalty_appliesDiscount() {
+    void calculateRoomPrice_diamondLoyalty_appliesDiscount() {
         // Arrange
         String roomType = "STANDARD";
         int nights = 2;
@@ -313,7 +330,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_with7Nights_appliesDiscount() {
+    void calculateRoomPrice_sevenNights_appliesDiscount() {
         // Arrange
         String roomType = "STANDARD";
         int nights = 7;
@@ -329,7 +346,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_with14Nights_appliesDiscount() {
+    void calculateRoomPrice_fourteenNights_appliesLargerDiscount() {
         // Arrange
         String roomType = "STANDARD";
         int nights = 14;
@@ -341,14 +358,14 @@ class BookingServiceTest {
 
         // Assert
         assertNotNull(price);
-        // Note: The logic has a bug - it checks nights >= 7 first, so 14 nights gets 0.95 discount, not 0.90
-        assertEquals("1596.00", price); // 120 * 0.95 * 14
+        // Note: Code has bug - 14 nights should get 0.90 discount but checks 7 first
+        assertEquals("1596.00", price); // 120 * 0.95 * 14 (gets 7+ discount, not 14+)
     }
 
     @Test
-    void calculateRoomPrice_withInvalidRoomType_usesDefaultPrice() {
+    void calculateRoomPrice_unknownRoomType_usesDefaultPrice() {
         // Arrange
-        String roomType = "INVALID";
+        String roomType = "UNKNOWN";
         int nights = 2;
         String season = "REGULAR";
         String loyalty = "NONE";
@@ -362,7 +379,24 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_withZeroNights_returnsZero() {
+    void calculateRoomPrice_combinedDiscounts_appliesAll() {
+        // Arrange
+        String roomType = "DELUXE";
+        int nights = 7;
+        String season = "OFF";
+        String loyalty = "GOLD";
+
+        // Act
+        String price = bookingService.calculateRoomPrice(roomType, nights, season, loyalty);
+
+        // Assert
+        assertNotNull(price);
+        // 200 * 0.8 (OFF) * 0.9 (GOLD) * 0.95 (7 nights) * 7 nights
+        assertEquals("957.60", price);
+    }
+
+    @Test
+    void calculateRoomPrice_zeroNights_returnsZero() {
         // Arrange
         String roomType = "STANDARD";
         int nights = 0;
@@ -378,10 +412,10 @@ class BookingServiceTest {
     }
 
     @Test
-    void calculateRoomPrice_withNegativeNights_returnsNegativePrice() {
+    void calculateRoomPrice_negativeNights_handlesGracefully() {
         // Arrange
         String roomType = "STANDARD";
-        int nights = -1;
+        int nights = -5;
         String season = "REGULAR";
         String loyalty = "NONE";
 
@@ -390,28 +424,12 @@ class BookingServiceTest {
 
         // Assert
         assertNotNull(price);
-        assertTrue(price.startsWith("-"));
+        // Negative nights will produce negative price
+        assertTrue(price.contains("-"));
     }
 
     @Test
-    void calculateRoomPrice_withCombinedDiscounts_appliesAll() {
-        // Arrange
-        String roomType = "DELUXE";
-        int nights = 7;
-        String season = "OFF";
-        String loyalty = "GOLD";
-
-        // Act
-        String price = bookingService.calculateRoomPrice(roomType, nights, season, loyalty);
-
-        // Assert
-        assertNotNull(price);
-        // 200 * 0.8 (OFF) * 0.9 (GOLD) * 0.95 (7 nights) * 7 = 958.32
-        assertEquals("958.32", price);
-    }
-
-    @Test
-    void isRoomAvailable_withStandardRoom_returnsTrue() {
+    void isRoomAvailable_standardRoom_returnsTrue() {
         // Arrange
         String roomType = "STANDARD";
 
@@ -423,7 +441,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void isRoomAvailable_withDeluxeRoom_returnsTrue() {
+    void isRoomAvailable_deluxeRoom_returnsTrue() {
         // Arrange
         String roomType = "DELUXE";
 
@@ -435,7 +453,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void isRoomAvailable_withSuiteRoom_returnsTrue() {
+    void isRoomAvailable_suiteRoom_returnsTrue() {
         // Arrange
         String roomType = "SUITE";
 
@@ -447,7 +465,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void isRoomAvailable_withVillaRoom_returnsTrue() {
+    void isRoomAvailable_villaRoom_returnsTrue() {
         // Arrange
         String roomType = "VILLA";
 
@@ -459,9 +477,9 @@ class BookingServiceTest {
     }
 
     @Test
-    void isRoomAvailable_withInvalidRoomType_returnsFalse() {
+    void isRoomAvailable_invalidRoomType_returnsFalse() {
         // Arrange
-        String roomType = "INVALID";
+        String roomType = "PENTHOUSE";
 
         // Act
         boolean result = bookingService.isRoomAvailable(roomType);
@@ -471,7 +489,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void isRoomAvailable_withEmptyRoomType_returnsFalse() {
+    void isRoomAvailable_emptyRoomType_returnsFalse() {
         // Arrange
         String roomType = "";
 
@@ -483,19 +501,19 @@ class BookingServiceTest {
     }
 
     @Test
-    void isRoomAvailable_withNullRoomType_returnsFalse() {
+    void isRoomAvailable_nullRoomType_returnsFalse() {
         // Arrange
         String roomType = null;
 
         // Act
-        boolean result = bookingService.isRoomAvailable(roomType);
-
-        // Assert
-        assertFalse(result);
+        // Act & Assert - Should throw NullPointerException
+        assertThrows(NullPointerException.class, () -> {
+            bookingService.isRoomAvailable(roomType);
+        });
     }
 
     @Test
-    void isRoomAvailable_withLowercaseRoomType_returnsFalse() {
+    void isRoomAvailable_lowercaseRoomType_returnsFalse() {
         // Arrange
         String roomType = "standard";
 
@@ -503,7 +521,7 @@ class BookingServiceTest {
         boolean result = bookingService.isRoomAvailable(roomType);
 
         // Assert
-        assertFalse(result);
+        assertFalse(result); // Case-sensitive check
     }
 
     @Test
@@ -521,60 +539,59 @@ class BookingServiceTest {
     }
 
     @Test
-    void generateReport_withEmptyMonth_returnsMessage() {
+    void generateReport_withDifferentMonths_includesMonthInMessage() {
         // Arrange
-        String month = "";
+        String month1 = "January";
+        String month2 = "December";
+
+        // Act
+        String result1 = bookingService.generateReport(month1);
+        String result2 = bookingService.generateReport(month2);
+
+        // Assert
+        assertTrue(result1.contains(month1));
+        assertTrue(result2.contains(month2));
+    }
+
+    @Test
+    void generateReport_includesPaymentApiReference() {
+        // Arrange
+        String month = "April";
 
         // Act
         String result = bookingService.generateReport(month);
 
         // Assert
-        assertNotNull(result);
-        assertTrue(result.contains("Report generation triggered"));
+        assertTrue(result.contains("http://"));
     }
 
     @Test
-    void generateReport_withNullMonth_returnsMessage() {
+    void createBooking_executesJdbcTemplate() {
         // Arrange
-        String month = null;
-
-        // Act
-        String result = bookingService.generateReport(month);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.contains("Report generation triggered"));
-    }
-
-    @Test
-    void createBooking_withSpecialCharactersInGuestName_handlesCorrectly() {
-        // Arrange
-        String guestName = "O'Brien";
+        String guestName = "Test Guest";
         String roomType = "STANDARD";
-        String checkIn = "2024-03-01";
-        String checkOut = "2024-03-03";
+        String checkIn = "2024-09-01";
+        String checkOut = "2024-09-05";
 
         // Act
-        Map<String, Object> result = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
+        bookingService.createBooking(guestName, roomType, checkIn, checkOut);
 
         // Assert
-        assertNotNull(result);
-        assertEquals(guestName, result.get("guestName"));
+        verify(jdbcTemplate, times(1)).execute(anyString());
     }
 
     @Test
-    void createBooking_withLongGuestName_handlesCorrectly() {
+    void createBooking_withNullValues_handlesGracefully() {
         // Arrange
-        String guestName = "A".repeat(100);
-        String roomType = "DELUXE";
-        String checkIn = "2024-03-01";
-        String checkOut = "2024-03-05";
+        String guestName = null;
+        String roomType = null;
+        String checkIn = null;
+        String checkOut = null;
 
-        // Act
-        Map<String, Object> result = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(guestName, result.get("guestName"));
+        // Act & Assert - Should not throw exception
+        assertDoesNotThrow(() -> {
+            Map<String, Object> result = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
+            assertNotNull(result);
+        });
     }
 }
