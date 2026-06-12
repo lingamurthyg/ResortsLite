@@ -1,15 +1,41 @@
+package com.demo.resortslite.entity;
+
+import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+
+import java.time.LocalDate;
+
+/**
  * Booking entity for PostgreSQL database.
  * Uses JPA annotations for ORM mapping with snake_case naming convention.
  */
 @Entity
 @Table(name = "bookings", schema = "public")
 public class Booking {
+
+    @Id
+    @Column(name = "id", nullable = false, length = 50)
     @NotNull(message = "Booking ID cannot be null")
+    private String id;
+
+    @Column(name = "guest", nullable = false, length = 255)
     @NotBlank(message = "Guest name cannot be blank")
+    private String guest;
+
+    @Column(name = "room", nullable = false, length = 100)
     @NotBlank(message = "Room type cannot be blank")
+    private String room;
+
+    @Column(name = "checkin", nullable = false)
     @NotNull(message = "Check-in date cannot be null")
+    private LocalDate checkin;
+
+    @Column(name = "checkout", nullable = false)
     @NotNull(message = "Check-out date cannot be null")
+    private LocalDate checkout;
+
+    @Column(name = "confirmation_code", length = 100)
+    private String confirmationCode;
 
     @Column(name = "created_at")
     private java.time.LocalDateTime createdAt;

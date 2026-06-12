@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReportService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ResortsLite</a> &gt; <a href="index.source.html" class="el_package">com.demo.resortslite</a> &gt; <span class="el_source">ReportService.java</span></div><h1>ReportService.java</h1><pre class="source lang-java linenums">package com.demo.resortslite;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+<span class="fc" id="L15">public class ReportService {</span>
+
+    // FIXED: Externalized paths to environment variables for cloud compatibility
+    // Use volume mounts, cloud object storage (S3 / Azure Blob), or environment variable
+    @Value(&quot;${app.report.base.path:/tmp/reports/}&quot;)
+    private String reportBasePath;
+
+    @Value(&quot;${app.backup.path:/tmp/backups/}&quot;)
+    private String backupPath;
+
+    // FIXED: Use environment variable for server port to allow dynamic assignment
+    @Value(&quot;${server.port:8080}&quot;)
+    private int serverPort;
+
+    // FIXED: Externalized report download URL to configuration
+    @Value(&quot;${app.report.download.base.url:https://reports.resorts-internal.com}&quot;)
+    private String reportDownloadBaseUrl;
+
+    // Modern DateTimeFormatter (thread-safe, immutable)
+<span class="fc" id="L34">    private static final DateTimeFormatter DATE_TIME_FORMATTER = </span>
+<span class="fc" id="L35">            DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd HH:mm:ss&quot;);</span>
+
+    /**
+     * Generates a monthly report for the specified month and year.
+     * FIXED: Uses configurable paths instead of hardcoded absolute paths.
+     * 
+     * @param month the month for the report
+     * @param year the year for the report
+     * @return a map containing the report generation status and details
+     */
+    public Map&lt;String, Object&gt; generateMonthlyReport(String month, String year) {
+<span class="fc" id="L46">        String fileName = &quot;resort_report_&quot; + month + &quot;_&quot; + year + &quot;.csv&quot;;</span>
+<span class="fc" id="L47">        String fullPath = reportBasePath + fileName;</span>
+
+<span class="fc" id="L49">        Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</span>
+
+        try {
+<span class="fc" id="L52">            File reportDir = new File(reportBasePath);</span>
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">            if (!reportDir.exists()) {</span>
+<span class="fc" id="L54">                boolean created = reportDir.mkdirs();</span>
+<span class="pc bpc" id="L55" title="1 of 2 branches missed.">                if (!created) {</span>
+<span class="nc" id="L56">                    result.put(&quot;status&quot;, &quot;error&quot;);</span>
+<span class="nc" id="L57">                    result.put(&quot;message&quot;, &quot;Failed to create report directory: &quot; + reportBasePath);</span>
+<span class="nc" id="L58">                    return result;</span>
+                }
+            }
+
+<span class="fc" id="L62">            try (FileWriter writer = new FileWriter(fullPath)) {</span>
+<span class="fc" id="L63">                writer.write(&quot;BookingID,GuestName,RoomType,CheckIn,CheckOut,Amount\n&quot;);</span>
+<span class="fc" id="L64">                writer.write(&quot;BK-001,John Smith,SUITE,2024-03-01,2024-03-05,1750.00\n&quot;);</span>
+<span class="fc" id="L65">                writer.write(&quot;BK-002,Jane Doe,DELUXE,2024-03-03,2024-03-07,960.00\n&quot;);</span>
+            }
+
+<span class="fc" id="L68">            result.put(&quot;status&quot;, &quot;generated&quot;);</span>
+<span class="fc" id="L69">            result.put(&quot;path&quot;, fullPath);</span>
+<span class="fc" id="L70">            result.put(&quot;serverPort&quot;, serverPort);</span>
+<span class="fc" id="L71">            result.put(&quot;downloadUrl&quot;, buildReportDownloadUrl(fileName));</span>
+
+<span class="nc" id="L73">        } catch (IOException e) {</span>
+<span class="nc" id="L74">            result.put(&quot;status&quot;, &quot;error&quot;);</span>
+<span class="nc" id="L75">            result.put(&quot;message&quot;, e.getMessage());</span>
+<span class="fc" id="L76">        }</span>
+
+<span class="fc" id="L78">        return result;</span>
+    }
+
+    /**
+     * Builds a download URL for the specified report.
+     * FIXED: Uses HTTPS and configurable base URL for cloud security compliance.
+     * 
+     * @param reportName the name of the report
+     * @return the download URL for the report
+     */
+    public String buildReportDownloadUrl(String reportName) {
+        // FIXED: Uses HTTPS and configurable URL from environment/configuration
+<span class="fc" id="L90">        return reportDownloadBaseUrl + &quot;/download/&quot; + reportName;</span>
+    }
+
+    /**
+     * Retrieves system information including paths and configuration.
+     * 
+     * @return a map containing system information
+     */
+    public Map&lt;String, Object&gt; getSystemInfo() {
+<span class="fc" id="L99">        String timestamp = LocalDateTime.now().format(DATE_TIME_FORMATTER);</span>
+<span class="fc" id="L100">        Map&lt;String, Object&gt; info = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L101">        info.put(&quot;reportPath&quot;, reportBasePath);</span>
+<span class="fc" id="L102">        info.put(&quot;backupPath&quot;, backupPath);</span>
+<span class="fc" id="L103">        info.put(&quot;serverPort&quot;, serverPort);</span>
+<span class="fc" id="L104">        info.put(&quot;generatedAt&quot;, timestamp);</span>
+<span class="fc" id="L105">        info.put(&quot;reportDownloadBaseUrl&quot;, reportDownloadBaseUrl);</span>
+<span class="fc" id="L106">        return info;</span>
+    }
+
+    /**
+     * Validates that the report directory is accessible.
+     * 
+     * @return true if the directory exists or can be created, false otherwise
+     */
+    public boolean validateReportDirectory() {
+<span class="fc" id="L115">        File reportDir = new File(reportBasePath);</span>
+<span class="pc bpc" id="L116" title="1 of 4 branches missed.">        return reportDir.exists() || reportDir.mkdirs();</span>
+    }
+
+    /**
+     * Cleans up old reports based on retention policy.
+     * 
+     * @param daysToKeep number of days to keep reports
+     * @return number of files deleted
+     */
+    public int cleanupOldReports(int daysToKeep) {
+<span class="fc" id="L126">        File reportDir = new File(reportBasePath);</span>
+<span class="pc bpc" id="L127" title="1 of 4 branches missed.">        if (!reportDir.exists() || !reportDir.isDirectory()) {</span>
+<span class="fc" id="L128">            return 0;</span>
+        }
+
+<span class="fc" id="L131">        long cutoffTime = System.currentTimeMillis() - (daysToKeep * 24L * 60L * 60L * 1000L);</span>
+<span class="fc" id="L132">        int deletedCount = 0;</span>
+
+<span class="fc" id="L134">        File[] files = reportDir.listFiles();</span>
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">        if (files != null) {</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">            for (File file : files) {</span>
+<span class="fc bfc" id="L137" title="All 4 branches covered.">                if (file.isFile() &amp;&amp; file.lastModified() &lt; cutoffTime) {</span>
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">                    if (file.delete()) {</span>
+<span class="fc" id="L139">                        deletedCount++;</span>
+                    }
+                }
+            }
+        }
+
+<span class="fc" id="L145">        return deletedCount;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

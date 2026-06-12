@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BookingService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ResortsLite</a> &gt; <a href="index.source.html" class="el_package">com.demo.resortslite</a> &gt; <span class="el_source">BookingService.java</span></div><h1>BookingService.java</h1><pre class="source lang-java linenums">package com.demo.resortslite;
+
+import com.demo.resortslite.entity.Booking;
+import com.demo.resortslite.repository.BookingRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+@Transactional
+<span class="fc" id="L20">public class BookingService {</span>
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    // FIXED: Externalized database credentials to environment variables/configuration
+    // Use Spring's @Value annotation to inject from application.properties or environment
+    @Value(&quot;${spring.datasource.url:jdbc:postgresql://localhost:5432/resortdb}&quot;)
+    private String dbHost;
+
+    @Value(&quot;${spring.datasource.username:postgres}&quot;)
+    private String dbUser;
+
+    // FIXED: Externalized payment API endpoint to configuration
+    @Value(&quot;${app.payment.endpoint:http://payment-svc.internal:9090/charge}&quot;)
+    private String paymentApi;
+
+    /**
+     * Creates a new booking using JPA repository pattern.
+     * Replaces raw JDBC with modern ORM approach for better maintainability.
+     * 
+     * @param guestName the guest name
+     * @param roomType the room type
+     * @param checkIn the check-in date
+     * @param checkOut the check-out date
+     * @return a map containing booking details
+     */
+    public Map&lt;String, Object&gt; createBooking(String guestName, String roomType,
+                                              String checkIn, String checkOut) {
+<span class="fc" id="L49">        String bookingId = &quot;BK-&quot; + UUID.randomUUID().toString().substring(0, 8).toUpperCase();</span>
+
+        // FIXED: Using JPA entity and repository instead of raw JDBC
+<span class="fc" id="L52">        Booking booking = new Booking();</span>
+<span class="fc" id="L53">        booking.setId(bookingId);</span>
+<span class="fc" id="L54">        booking.setGuest(guestName);</span>
+<span class="fc" id="L55">        booking.setRoom(roomType);</span>
+<span class="fc" id="L56">        booking.setCheckin(LocalDate.parse(checkIn));</span>
+<span class="fc" id="L57">        booking.setCheckout(LocalDate.parse(checkOut));</span>
+
+        // Generate secure confirmation code
+<span class="fc" id="L60">        String confirmCode = sha256Hash(bookingId + guestName);</span>
+<span class="fc" id="L61">        booking.setConfirmationCode(confirmCode);</span>
+
+        // Save using JPA repository - automatic transaction management
+<span class="fc" id="L64">        Booking savedBooking = bookingRepository.save(booking);</span>
+
+<span class="fc" id="L66">        Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L67">        result.put(&quot;bookingId&quot;, savedBooking.getId());</span>
+<span class="fc" id="L68">        result.put(&quot;guestName&quot;, savedBooking.getGuest());</span>
+<span class="fc" id="L69">        result.put(&quot;roomType&quot;, savedBooking.getRoom());</span>
+<span class="fc" id="L70">        result.put(&quot;checkIn&quot;, savedBooking.getCheckin().toString());</span>
+<span class="fc" id="L71">        result.put(&quot;checkOut&quot;, savedBooking.getCheckout().toString());</span>
+<span class="fc" id="L72">        result.put(&quot;confirmationCode&quot;, savedBooking.getConfirmationCode());</span>
+<span class="fc" id="L73">        result.put(&quot;dbHost&quot;, dbHost);</span>
+<span class="fc" id="L74">        return result;</span>
+    }
+
+    /**
+     * Retrieves a booking by ID using JPA repository.
+     * Replaces raw JDBC query with type-safe repository method.
+     * 
+     * @param bookingId the booking ID
+     * @return a map containing booking details or error message
+     */
+    @Transactional(readOnly = true)
+    public Map&lt;String, Object&gt; getBookingById(String bookingId) {
+<span class="fc" id="L86">        Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</span>
+        
+<span class="fc" id="L88">        Optional&lt;Booking&gt; bookingOpt = bookingRepository.findById(bookingId);</span>
+        
+<span class="fc bfc" id="L90" title="All 2 branches covered.">        if (bookingOpt.isPresent()) {</span>
+<span class="fc" id="L91">            Booking booking = bookingOpt.get();</span>
+<span class="fc" id="L92">            result.put(&quot;id&quot;, booking.getId());</span>
+<span class="fc" id="L93">            result.put(&quot;guest&quot;, booking.getGuest());</span>
+<span class="fc" id="L94">            result.put(&quot;room&quot;, booking.getRoom());</span>
+<span class="fc" id="L95">            result.put(&quot;checkin&quot;, booking.getCheckin().toString());</span>
+<span class="fc" id="L96">            result.put(&quot;checkout&quot;, booking.getCheckout().toString());</span>
+<span class="fc" id="L97">            result.put(&quot;confirmationCode&quot;, booking.getConfirmationCode());</span>
+<span class="fc" id="L98">            result.put(&quot;createdAt&quot;, booking.getCreatedAt().toString());</span>
+<span class="fc" id="L99">            result.put(&quot;updatedAt&quot;, booking.getUpdatedAt().toString());</span>
+<span class="fc" id="L100">        } else {</span>
+<span class="fc" id="L101">            result.put(&quot;error&quot;, &quot;Booking not found: &quot; + bookingId);</span>
+        }
+        
+<span class="fc" id="L104">        return result;</span>
+    }
+
+    /**
+     * Calculates room price based on various factors.
+     * REFACTORED: Reduced cyclomatic complexity by extracting logic into separate methods.
+     * 
+     * @param roomType the room type
+     * @param nights number of nights
+     * @param season the season
+     * @param loyalty the loyalty tier
+     * @return the calculated price as a string
+     */
+    public String calculateRoomPrice(String roomType, int nights, String season, String loyalty) {
+<span class="fc" id="L118">        double basePrice = getBasePrice(roomType);</span>
+<span class="fc" id="L119">        basePrice = applySeasonalAdjustment(basePrice, season);</span>
+<span class="fc" id="L120">        basePrice = applyLoyaltyDiscount(basePrice, loyalty);</span>
+<span class="fc" id="L121">        basePrice = applyLengthOfStayDiscount(basePrice, nights);</span>
+        
+<span class="fc" id="L123">        double total = basePrice * nights;</span>
+<span class="fc" id="L124">        return String.format(&quot;%.2f&quot;, total);</span>
+    }
+
+    /**
+     * Gets the base price for a room type.
+     * Extracted method to reduce complexity.
+     * 
+     * @param roomType the room type
+     * @return the base price
+     */
+    private double getBasePrice(String roomType) {
+<span class="fc bfc" id="L135" title="All 5 branches covered.">        return switch (roomType) {</span>
+<span class="fc" id="L136">            case &quot;STANDARD&quot; -&gt; 120.0;</span>
+<span class="fc" id="L137">            case &quot;DELUXE&quot; -&gt; 200.0;</span>
+<span class="fc" id="L138">            case &quot;SUITE&quot; -&gt; 350.0;</span>
+<span class="fc" id="L139">            case &quot;VILLA&quot; -&gt; 600.0;</span>
+<span class="fc" id="L140">            default -&gt; 120.0;</span>
+        };
+    }
+
+    /**
+     * Applies seasonal price adjustment.
+     * Extracted method to reduce complexity.
+     * 
+     * @param basePrice the base price
+     * @param season the season
+     * @return the adjusted price
+     */
+    private double applySeasonalAdjustment(double basePrice, String season) {
+<span class="fc bfc" id="L153" title="All 3 branches covered.">        return switch (season) {</span>
+<span class="fc" id="L154">            case &quot;PEAK&quot; -&gt; basePrice * 1.5;</span>
+<span class="fc" id="L155">            case &quot;OFF&quot; -&gt; basePrice * 0.8;</span>
+<span class="fc" id="L156">            default -&gt; basePrice;</span>
+        };
+    }
+
+    /**
+     * Applies loyalty discount.
+     * Extracted method to reduce complexity.
+     * 
+     * @param basePrice the base price
+     * @param loyalty the loyalty tier
+     * @return the adjusted price
+     */
+    private double applyLoyaltyDiscount(double basePrice, String loyalty) {
+<span class="fc bfc" id="L169" title="All 4 branches covered.">        return switch (loyalty) {</span>
+<span class="fc" id="L170">            case &quot;GOLD&quot; -&gt; basePrice * 0.9;</span>
+<span class="fc" id="L171">            case &quot;PLATINUM&quot; -&gt; basePrice * 0.8;</span>
+<span class="fc" id="L172">            case &quot;DIAMOND&quot; -&gt; basePrice * 0.7;</span>
+<span class="fc" id="L173">            default -&gt; basePrice;</span>
+        };
+    }
+
+    /**
+     * Applies length of stay discount.
+     * Extracted method to reduce complexity.
+     * 
+     * @param basePrice the base price
+     * @param nights number of nights
+     * @return the adjusted price
+     */
+    private double applyLengthOfStayDiscount(double basePrice, int nights) {
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        if (nights &gt;= 14) {</span>
+<span class="fc" id="L187">            return basePrice * 0.90;</span>
+<span class="fc bfc" id="L188" title="All 2 branches covered.">        } else if (nights &gt;= 7) {</span>
+<span class="fc" id="L189">            return basePrice * 0.95;</span>
+        }
+<span class="fc" id="L191">        return basePrice;</span>
+    }
+
+    /**
+     * Checks if a room type is available.
+     * REFACTORED: Uses enum-based validation for better maintainability.
+     * 
+     * @param roomType the room type
+     * @return true if the room type is valid, false otherwise
+     */
+    public boolean isRoomAvailable(String roomType) {
+<span class="fc" id="L202">        return RoomType.isValid(roomType);</span>
+    }
+
+    /**
+     * Generates a report reference.
+     * 
+     * @param month the month for the report
+     * @return a report generation message
+     */
+    public String generateReport(String month) {
+<span class="fc" id="L212">        return &quot;Report generation triggered for: &quot; + month + &quot; via &quot; + paymentApi;</span>
+    }
+
+    /**
+     * Generates SHA-256 hash for the given input string.
+     * Replaces the deprecated MD5 algorithm with secure SHA-256.
+     * 
+     * @param input the string to hash
+     * @return hexadecimal representation of the SHA-256 hash
+     */
+    private String sha256Hash(String input) {
+        try {
+<span class="fc" id="L224">            MessageDigest md = MessageDigest.getInstance(&quot;SHA-256&quot;);</span>
+<span class="fc" id="L225">            byte[] hash = md.digest(input.getBytes());</span>
+<span class="fc" id="L226">            StringBuilder sb = new StringBuilder();</span>
+<span class="fc bfc" id="L227" title="All 2 branches covered.">            for (byte b : hash) { </span>
+<span class="fc" id="L228">                sb.append(String.format(&quot;%02x&quot;, b)); </span>
+            }
+<span class="fc" id="L230">            return sb.toString();</span>
+<span class="nc" id="L231">        } catch (NoSuchAlgorithmException e) {</span>
+            // Fallback to input if SHA-256 is not available (should never happen in Java 21)
+<span class="nc" id="L233">            return input;</span>
+        }
+    }
+
+    /**
+     * Enum for room types to eliminate duplicated validation logic.
+     * Provides centralized room type management.
+     */
+<span class="fc" id="L241">    private enum RoomType {</span>
+<span class="fc" id="L242">        STANDARD, DELUXE, SUITE, VILLA;</span>
+
+        public static boolean isValid(String roomType) {
+<span class="fc bfc" id="L245" title="All 2 branches covered.">            if (roomType == null) {</span>
+<span class="fc" id="L246">                return false;</span>
+            }
+            try {
+<span class="fc" id="L249">                valueOf(roomType);</span>
+<span class="fc" id="L250">                return true;</span>
+<span class="fc" id="L251">            } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L252">                return false;</span>
+            }
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

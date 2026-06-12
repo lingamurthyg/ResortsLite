@@ -57,6 +57,10 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
      * Count bookings by room type.
      * PostgreSQL-compatible count query.
      * 
+     * @param room the room type
+     * @return count of bookings for the room type
+     */
+    Long countByRoom(@Param("room") String room);
 
     /**
      * Find all bookings created after a specific date.
@@ -81,5 +85,4 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
     List<Booking> findByRoomAndDateRange(@Param("room") String room,
                                           @Param("startDate") LocalDate startDate,
                                           @Param("endDate") LocalDate endDate);
-    Long countByRoom(@Param("room") String room);
 }

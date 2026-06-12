@@ -242,6 +242,9 @@ public class BookingService {
         STANDARD, DELUXE, SUITE, VILLA;
 
         public static boolean isValid(String roomType) {
+            if (roomType == null) {
+                return false;
+            }
             try {
                 valueOf(roomType);
                 return true;

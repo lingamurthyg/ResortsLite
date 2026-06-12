@@ -2,3 +2,7 @@
 /modernize-data/studio-data/TNT1001/APP735641/transformed-code/8/studio-workspace/commonservices/src/main/java/com/demo/resortslite/ResortsLiteApplication.java
 /modernize-data/studio-data/TNT1001/APP735641/transformed-code/8/studio-workspace/commonservices/src/main/java/com/demo/resortslite/BookingController.java
 /modernize-data/studio-data/TNT1001/APP735641/transformed-code/8/studio-workspace/commonservices/src/main/java/com/demo/resortslite/BookingService.java
+/modernize-data/studio-data/TNT1001/APP735641/transformed-code/8/studio-workspace/commonservices/src/main/java/com/demo/resortslite/config/PostgreSQLConfig.java
+/modernize-data/studio-data/TNT1001/APP735641/transformed-code/8/studio-workspace/commonservices/src/main/java/com/demo/resortslite/entity/Booking.java
+/modernize-data/studio-data/TNT1001/APP735641/transformed-code/8/studio-workspace/commonservices/src/main/java/com/demo/resortslite/config/DatabaseConfig.java
+/modernize-data/studio-data/TNT1001/APP735641/transformed-code/8/studio-workspace/commonservices/src/main/java/com/demo/resortslite/repository/BookingRepository.java
