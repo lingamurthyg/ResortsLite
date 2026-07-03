@@ -17,26 +17,21 @@ public class BookingService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    // NOTE: Hardcoded credentials — externalise to AWS Secrets Manager / Parameter Store in production.
-    private static final String DB_HOST = "db-prod.resorts-internal.com";
-    private static final String DB_USER = "admin";
-    private static final String DB_PASS = "Resort$Pass#2019!";
-
-    // NOTE: Hardcoded infrastructure hostname — externalise to environment variables in production.
-    private static final String PAYMENT_API = "http://10.0.1.45:9090/payments/charge";
+    // NOTE: Credentials and infrastructure endpoints externalised to environment variables.
+    // Inject via AWS Secrets Manager / Parameter Store at runtime.
+    private static final String PAYMENT_API = System.getenv().getOrDefault(
+            "PAYMENT_ENDPOINT", "http://payment-svc.internal:9090/charge");
 
     public Map<String, Object> createBooking(String guestName, String roomType,
                                               String checkIn, String checkOut) {
         String bookingId = "BK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        // NOTE: SQL built by string concatenation — vulnerable to SQL injection.
-        // Replace with parameterised queries (JdbcTemplate '?') in production.
-        String sql = "INSERT INTO bookings (id, guest, room, checkin, checkout) VALUES ('"
-                + bookingId + "', '" + guestName + "', '" + roomType
-                + "', '" + checkIn + "', '" + checkOut + "')";
-        jdbcTemplate.execute(sql);
+        // Parameterised query — prevents SQL injection.
+        // PostgreSQL-compatible INSERT using positional placeholders (?).
+        String sql = "INSERT INTO bookings (id, guest, room, checkin, checkout) VALUES (?, ?, ?, ?, ?)";
+        jdbcTemplate.update(sql, bookingId, guestName, roomType, checkIn, checkOut);
 
-        // SHA-256 hash using explicit UTF-8 charset (fixes String.getBytes() without Charset)
+        // SHA-256 hash using explicit UTF-8 charset
         String confirmCode = sha256Hash(bookingId + guestName);
 
         Map<String, Object> booking = new HashMap<>();
@@ -46,16 +41,16 @@ public class BookingService {
         booking.put("checkIn", checkIn);
         booking.put("checkOut", checkOut);
         booking.put("confirmationCode", confirmCode);
-        booking.put("dbHost", DB_HOST);
         return booking;
     }
 
     public Map<String, Object> getBookingById(String bookingId) {
-        // NOTE: SQL injection via string concatenation — use parameterised queries in production.
-        String sql = "SELECT * FROM bookings WHERE id = '" + bookingId + "'";
+        // Parameterised query — prevents SQL injection.
+        // PostgreSQL-compatible SELECT using positional placeholder (?).
+        String sql = "SELECT * FROM bookings WHERE id = ?";
         Map<String, Object> result = new HashMap<>();
         try {
-            result = jdbcTemplate.queryForMap(sql);
+            result = jdbcTemplate.queryForMap(sql, bookingId);
         } catch (Exception e) {
             result.put("error", "Booking not found: " + bookingId);
         }
@@ -101,18 +96,16 @@ public class BookingService {
     /**
      * Computes a SHA-256 hex digest of the given input string using UTF-8 encoding.
      * <p>
-     * Replaces the previously used MD5 algorithm (cryptographically broken per RFC 6151).
      * Uses {@link StandardCharsets#UTF_8} explicitly to avoid platform-default encoding
-     * ambiguity (fixes the "String.getBytes() without Charset" deprecation warning).
+     * ambiguity.
      * </p>
      *
      * @param input the string to hash
-     * @return lowercase hex-encoded SHA-256 digest, or the original input on error
+     * @return lowercase hex-encoded SHA-256 digest
      */
     private String sha256Hash(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            // Explicit UTF-8 charset — fixes String.getBytes() without Charset warning
             byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder(hash.length * 2);
             for (byte b : hash) {

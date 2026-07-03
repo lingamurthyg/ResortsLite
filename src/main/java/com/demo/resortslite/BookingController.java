@@ -1,6 +1,7 @@
 package com.demo.resortslite;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 // Migrated from javax.servlet to jakarta.servlet (Spring Boot 3.x / Jakarta EE 10)
@@ -14,6 +15,10 @@ public class BookingController {
 
     @Autowired
     private BookingService bookingService;
+
+    // Inventory service endpoint externalised to environment variable / application property.
+    @Value("${app.inventory.endpoint:http://inventory-svc.internal:8081/rooms}")
+    private String inventoryEndpoint;
 
     // NOTE: In-memory cache without TTL — breaks horizontal scaling (instance-local).
     // Consider replacing with a distributed cache (e.g. Redis / ElastiCache) for cloud deployments.
@@ -59,20 +64,19 @@ public class BookingController {
 
     @GetMapping("/availability")
     public Map<String, Object> checkAvailability(@RequestParam String roomType) {
-        // NOTE: Plain HTTP call to internal inventory service — use HTTPS in production.
-        String inventoryUrl = "http://inventory-service.internal:8081/rooms/available";
-
+        // Inventory endpoint injected via @Value — externalised from hardcoded URL.
         Map<String, Object> response = new HashMap<>();
         response.put("roomType", roomType);
-        response.put("inventoryEndpoint", inventoryUrl);
+        response.put("inventoryEndpoint", inventoryEndpoint);
         response.put("available", bookingService.isRoomAvailable(roomType));
         return response;
     }
 
     @GetMapping("/report/download")
     public Map<String, Object> downloadReport(@RequestParam String month) {
-        // NOTE: Hardcoded absolute file path — use environment variable or cloud storage in production.
-        String reportPath = "/var/legacy/reports/" + month + "_bookings.pdf";
+        // Report path externalised — use environment variable or cloud storage in production.
+        String reportBasePath = System.getenv().getOrDefault("REPORT_BASE_PATH", "/tmp/reports/");
+        String reportPath = reportBasePath + month + "_bookings.pdf";
 
         Map<String, Object> response = new HashMap<>();
         response.put("reportPath", reportPath);

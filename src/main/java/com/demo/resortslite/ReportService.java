@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-// Migrated from legacy java.util.Date / SimpleDateFormat to java.time API (Java 8+)
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -15,22 +14,26 @@ import java.util.Map;
 @Service
 public class ReportService {
 
-    // NOTE: Hardcoded absolute path — use environment variable or cloud object storage (S3) in production.
-    private static final String REPORT_BASE_PATH = "/var/legacy/reports/";
+    // Report base path externalised to environment variable.
+    // Falls back to /tmp/reports for container compatibility (avoids hardcoded /var/legacy path).
+    private static final String REPORT_BASE_PATH = System.getenv().getOrDefault(
+            "REPORT_BASE_PATH", "/tmp/reports/");
 
-    // NOTE: Windows-style absolute path — will fail on Linux containers. Externalise in production.
-    private static final String BACKUP_PATH = "C:\\ResortBackups\\nightly\\";
+    // Backup path externalised to environment variable.
+    // Removed Windows-style absolute path — incompatible with Linux containers.
+    private static final String BACKUP_PATH = System.getenv().getOrDefault(
+            "BACKUP_PATH", "/tmp/backups/");
 
-    // NOTE: Fixed server port — container orchestration (ECS/EKS) assigns ports dynamically.
-    private static final int SERVER_PORT = 8080;
+    // Server port externalised to environment variable for dynamic assignment in ECS/EKS.
+    private static final int SERVER_PORT = Integer.parseInt(
+            System.getenv().getOrDefault("SERVER_PORT", "8080"));
 
     /**
      * Generates a monthly CSV report for the given month and year.
      * Writes the report to the configured REPORT_BASE_PATH directory.
      * <p>
      * Uses {@link FileWriter} with an explicit {@link StandardCharsets#UTF_8} charset
-     * to avoid platform-default encoding ambiguity (fixes the legacy FileWriter without
-     * Charset deprecation warning introduced in Java 11).
+     * to avoid platform-default encoding ambiguity.
      * </p>
      *
      * @param month the month identifier (e.g. "03")
@@ -70,13 +73,16 @@ public class ReportService {
 
     /**
      * Builds the download URL for a named report file.
-     * NOTE: Plain HTTP URL — use HTTPS in production cloud deployments.
+     * Uses HTTPS for secure communication in production cloud deployments.
+     * Base URL is externalised to an environment variable.
      *
      * @param reportName the name of the report file
      * @return the full download URL string
      */
     public String buildReportDownloadUrl(String reportName) {
-        return "http://reports.resorts-internal.com:8080/download/" + reportName;
+        String reportBaseUrl = System.getenv().getOrDefault(
+                "REPORT_BASE_URL", "https://reports.resorts-internal.com/download");
+        return reportBaseUrl + "/" + reportName;
     }
 
     /**

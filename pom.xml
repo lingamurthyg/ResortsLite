@@ -62,22 +62,15 @@
             <version>4.4</version>
         </dependency>
 
-        <!-- H2 in-memory database for development/testing -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
         <!--
-            MySQL connector — updated artifact ID from mysql:mysql-connector-java
-            to com.mysql:mysql-connector-j (new groupId/artifactId since 8.0.31).
-            Version 8.2.0 provides full Java 21 support.
+            Replaced H2 in-memory database and MySQL connector with PostgreSQL JDBC driver.
+            PostgreSQL 16 is the target database for this migration.
+            Using postgresql 42.7.3 which provides full Java 21 and PostgreSQL 16 support.
         -->
         <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <version>8.2.0</version>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.3</version>
             <scope>runtime</scope>
         </dependency>
 
