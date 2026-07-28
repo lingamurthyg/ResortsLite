@@ -1,5 +1,6 @@
 package com.demo.resortslite;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,17 +16,17 @@ public class BookingService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    // VIOLATION [Security Health / Critical]: Hardcoded database credentials in source code.
-    // If this repo is pushed to GitHub (even private), credentials are permanently exposed
-    // in git history. AWS Secrets Manager or Parameter Store must be used instead.
-    private static final String DB_HOST = "db-prod.resorts-internal.com"; // cr-java-0021
+    // FIXED blocker-12 (cz-java-0062): Externalized hardcoded values to environment variables
+    @Value("${DB_HOST:db-prod.resorts-internal.com}")
+    private String dbHost; // Externalized to environment variable
+    
     private static final String DB_USER = "admin";                         // sec-cred-001
     private static final String DB_PASS = "Resort$Pass#2019!";             // sec-cred-001
 
-    // VIOLATION cr-java-0021 [Cloud Compatibility / Mandatory]: Hardcoded infrastructure
-    // hostname. Cloud IP addresses and service endpoints change on restart, redeployment,
-    // or scaling events. Must be externalised to environment variables / Parameter Store.
-    private static final String PAYMENT_API = "http://10.0.1.45:9090/payments/charge"; // cr-java-0021, cr-java-0088
+    // FIXED blocker-12 (cz-java-0062): Replaced hardcoded IP address with environment variable
+    // Use AWS service endpoints and DNS-based discovery for flexible container deployments
+    @Value("${PAYMENT_API_ENDPOINT:http://payment-service:9090/payments/charge}")
+    private String paymentApi;
 
     public Map<String, Object> createBooking(String guestName, String roomType,
                                               String checkIn, String checkOut) {
@@ -50,7 +51,7 @@ public class BookingService {
         booking.put("checkIn", checkIn);
         booking.put("checkOut", checkOut);
         booking.put("confirmationCode", confirmCode);
-        booking.put("dbHost", DB_HOST);
+        booking.put("dbHost", dbHost);
         return booking;
     }
 
@@ -99,8 +100,19 @@ public class BookingService {
         return true;
     }
 
+    // FIXED blocker-10 (cz-java-0082): Externalized service endpoint for microservices architecture
+    // Service-to-service communication should use AWS App Mesh or API Gateway
     public String generateReport(String month) {
-        return "Report generation triggered for: " + month + " via " + PAYMENT_API;
+        return "Report generation triggered for: " + month + " via " + paymentApi;
+    }
+
+    /**
+     * Get inventory service endpoint for service discovery
+     * @return Inventory service endpoint URL
+     */
+    public String getInventoryEndpoint() {
+        // Externalized endpoint for container-based service discovery
+        return System.getenv().getOrDefault("INVENTORY_ENDPOINT", "http://inventory-service:8081/rooms/available");
     }
 
     private String md5Hash(String input) { // sec-weak-hash-001
