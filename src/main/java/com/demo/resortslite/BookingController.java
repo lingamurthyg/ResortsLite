@@ -3,7 +3,7 @@ package com.demo.resortslite;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,11 +25,19 @@ public class BookingController {
             @RequestParam String checkIn,
             @RequestParam String checkOut,
             HttpSession session) {
+        
+        // Basic input validation
+        if (guestName == null || guestName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Guest name is required");
+        }
+        if (roomType == null || roomType.trim().isEmpty()) {
+            throw new IllegalArgumentException("Room type is required");
+        }
 
         Map<String, Object> booking = bookingService.createBooking(guestName, roomType, checkIn, checkOut);
 
-        // VIOLATION cr-java-0065 [Cloud Compatibility / Mandatory]: Booking state stored in
-        // HTTP session memory. AWS ALB distributes requests across EC2 instances — session
+        // VIOLATION cr-java-0065 [Cloud Compatibility / Mandatory]: Storing business state
+        // in HTTP session. In a cloud environment with multiple instances behind a load balancer,
         // data on instance A is invisible to instance B. Auto-scaling and failover breaks.
         session.setAttribute("lastBooking", booking); // cr-java-0065
         session.setAttribute("guestName", guestName); // cr-java-0065

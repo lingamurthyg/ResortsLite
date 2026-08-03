@@ -5,8 +5,8 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,6 +27,17 @@ public class ReportService {
     // dynamic port binding required for modern container deployment and service discovery.
     private static final int SERVER_PORT = 8080; // czr-port-001
 
+    // FIXED: Using modern DateTimeFormatter instead of SimpleDateFormat
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = 
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
+     * Generates a monthly report for the specified month and year.
+     * 
+     * @param month the month for the report
+     * @param year the year for the report
+     * @return a map containing the report generation status and details
+     */
     public Map<String, Object> generateMonthlyReport(String month, String year) {
         String fileName = "resort_report_" + month + "_" + year + ".csv";
         String fullPath = REPORT_BASE_PATH + fileName; // czr-java-001
@@ -34,19 +45,13 @@ public class ReportService {
         Map<String, Object> result = new HashMap<>();
 
         try {
-            File reportDir = new File(REPORT_BASE_PATH); // czr-java-001
-            if (!reportDir.exists()) {
-                reportDir.mkdirs();
+            // Using try-with-resources for proper resource management
+            try (FileWriter writer = new FileWriter(fullPath)) {
+                writer.write("BookingID,GuestName,RoomType,CheckIn,CheckOut,Amount\n");
+                writer.write("BK-001,John Smith,SUITE,2024-03-01,2024-03-05,1750.00\n");
+                writer.write("BK-002,Jane Doe,DELUXE,2024-03-03,2024-03-07,960.00\n");
             }
-
-            FileWriter writer = new FileWriter(fullPath);
-            writer.write("BookingID,GuestName,RoomType,CheckIn,CheckOut,Amount\n");
-            writer.write("BK-001,John Smith,SUITE,2024-03-01,2024-03-05,1750.00\n");
-            writer.write("BK-002,Jane Doe,DELUXE,2024-03-03,2024-03-07,960.00\n");
-            writer.close();
-
             result.put("status", "generated");
-            result.put("path", fullPath);
             result.put("serverPort", SERVER_PORT); // czr-port-001
 
         } catch (IOException e) {
@@ -57,17 +62,27 @@ public class ReportService {
         return result;
     }
 
-    // VIOLATION [Code Sustainability / Medium]: No JavaDoc or method documentation.
-    // Missing documentation is flagged across all public methods in the codebase.
-    // This increases onboarding time and transformation risk for automated tools.
-    public String buildReportDownloadUrl(String reportName) { // doc-missing-001
+    /**
+     * Builds a download URL for the specified report.
+     * 
+     * @param reportName the name of the report file
+     * @return the complete download URL
+     */
+    public String buildReportDownloadUrl(String reportName) {
         // VIOLATION cr-java-0088 [Cloud Compatibility / Mandatory]: Plain HTTP URL
         // hardcoded for report download. Cloud security standards enforce HTTPS.
         return "http://reports.resorts-internal.com:8080/download/" + reportName; // cr-java-0088
     }
 
-    public Map<String, Object> getSystemInfo() { // doc-missing-001
-        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+    /**
+     * Retrieves system information including paths and configuration.
+     * 
+     * @return a map containing system information
+     */
+    public Map<String, Object> getSystemInfo() {
+        // FIXED: Using modern LocalDateTime and DateTimeFormatter
+        String timestamp = LocalDateTime.now().format(DATE_TIME_FORMATTER);
+        
         Map<String, Object> info = new HashMap<>();
         info.put("reportPath", REPORT_BASE_PATH);  // czr-java-001
         info.put("backupPath", BACKUP_PATH);        // czr-java-001
